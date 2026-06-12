@@ -1,0 +1,33 @@
+{
+  "name": "@brainbudget/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "demo:e2e": "tsx scripts/e2e.ts",
+    "script": "tsx"
+  },
+  "dependencies": {
+    "@brainbudget/shared": "workspace:*",
+    "@metamask/smart-accounts-kit": "^1.6.0",
+    "@metamask/x402": "^0.2.0",
+    "@x402/core": "^2.14.0",
+    "@x402/evm": "^2.14.0",
+    "@x402/express": "^2.14.0",
+    "@x402/fetch": "^2.14.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "venice-x402-client": "^0.2.0",
+    "viem": "^2.31.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.2",
+    "@types/node": "^22.15.3",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "name": "brainbudget",
+  "private": true,
+  "version": "0.1.0",
+  "description": "A research agent that pays for its own brain — ERC-7710 delegated budgets + x402 micropayments + Venice AI",
+  "scripts": {
+    "dev": "pnpm --parallel --filter web --filter server dev",
+    "build": "pnpm -r build",
+    "demo:e2e": "pnpm --filter server demo:e2e"
+  },
+  "packageManager": "pnpm@11.6.0",
+  "engines": {
+    "node": ">=20"
+  }
+}

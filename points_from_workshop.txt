@@ -1,0 +1,37 @@
+points from your suggested workshop videos;
+- Public Relayer Skill: To enable your agent to interact with the OneShot API, you should install their public relayer skill. You can do this by running: npx @oneshot-api/skills public-relayer in your terminal. This provides the agent with documentation and methods for the relayer.
+- The speakers strongly advise feeding llm.txt files to your AI coding agents to ensure they are using the latest version of the Smart Account Kit and ERC-7715 specifications, rather than deprecated libraries like the old Delegation Toolkit
+- Is It Agent Ready? (isitagentready.com): This tool helps you check if your site is discoverable and accessible for AI crawlers by testing for sitemaps, link headers, and proper robots.txt configurations.
+- Google Lighthouse: Recommended for general SEO and performance testing to ensure your application meets production standards
+- Winning Tips & Best Practices:
+
+Brainstorm with Agents: Don't just tell an agent to "build something"; use your coding agent as a brainstorming partner to iterate on creative ideas, such as collaborative tools or autonomous donation platforms.
+Plan Before You Code: Create a clear plan or documentation file (llm.txt) to guide your coding agent, which saves token usage and keeps the agent focused .
+Use Visual Mockups: Start with simple mockups (e.g., Google Stitch) to give the AI agent a target to hit, which drastically reduces trial-and-error .
+Verify with Tools: Use Google Lighthouse and Is It Agent Ready? (isitagentready.com) to ensure your application is discoverable and meets production-grade web standards 
+Development Requirements & Gotchas:
+
+Permissions: Leverage ERC-7715 advanced permissions to create non-custodial agentic wallets where users set specific spending limits and frequencies.
+Batch Mode Caution: Be aware that not all caveats are compatible with batch execution modes; if your transactions fail, try using single mode first.
+
+- x402 Landscape & Analytics:
+x402 Scan: Recommended for tracking the state and activity of the landscape.
+x402 Payment Analytics (Dune Dashboard): Built by Chris, this dashboard provides insights into volume, facilitator activity, and network breakdowns.
+- Developer Tooling & Integration:
+MetaMask x402 Package: The team utilizes this package to bridge the gap in x402 support for ERC-7710.
+Caveat Enforcers: Crucial for managing permissions, specifically the Limited Calls Enforcer, which restricts how many times a delegate can execute a transaction.
+Wagmi & Connect: The hosts reference Wagmi V3 documentation and migration guides to integrate MetaMask Connect.
+The developers emphasize that these docs are essential for context-loading into coding assistants (like Cursor) to effectively handle complex configurations like payment payloads and delegator permissions.
+
+- Hackathon Focus & Tracks:
+
+Primary Tech Stack: The hackathon focuses on leveraging x402, Oneshot API, Venice AI, and Smart Account Kit.
+Key Categories: Participants are encouraged to explore tracks like x402 (which is experimental and a personal favorite of the team), Smart Account Kit, and Agent-to-Agent coordination.
+Scope: It is not just about building from scratch; participants are encouraged to enhance existing functionality or integrate new tech stacks into their projects.
+- Winning Tips & Best Practices:
+
+Document Everything: Document your build process thoroughly. Write blogs, create proper README files, and share your journey on social media (e.g., Twitter/X).
+Don't Wait Until the End: The team emphasizes taking your time to learn and build properly rather than rushing during the final three days of the hackathon.
+- Important Considerations:
+
+Experimental Tech: Since x402 is relatively new, the team notes that documentation may evolve rapidly. Staying updated on new releases is crucial.
