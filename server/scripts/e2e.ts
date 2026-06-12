@@ -81,9 +81,16 @@ async function main() {
     amountUsdc: CLAIM_USDC,
   });
   const receipt = await publicClient.waitForTransactionReceipt({ hash: claimTx });
-  const after = await usdcBalance(agentEoa.address);
   console.log(`\n✓ redeemed ${CLAIM_USDC} USDC → agent | status=${receipt.status} | ${config.explorerTxUrl(claimTx)}`);
-  if (receipt.status !== "success" || after - before !== 50_000n) {
+  if (receipt.status !== "success") throw new Error("redemption transaction reverted");
+
+  // Public RPCs are load-balanced; poll until the read catches up to the receipt.
+  let after = before;
+  for (let attempt = 0; attempt < 10 && after - before !== 50_000n; attempt++) {
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    after = await usdcBalance(agentEoa.address);
+  }
+  if (after - before !== 50_000n) {
     throw new Error("redemption did not transfer the expected amount");
   }
 
