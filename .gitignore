@@ -9,3 +9,7 @@ out/
 reference/
 *.log
 .DS_Store
+
+.playwright-mcp/
+*.tsbuildinfo
+fable_response.md
