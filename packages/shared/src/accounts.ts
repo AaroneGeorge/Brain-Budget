@@ -53,6 +53,56 @@ export async function makeSmartAccount(
 }
 
 /**
+ * EIP-7702 smart account: the EOA itself, upgraded to EIP7702StatelessDeleGator.
+ * Required by the MetaMask x402 facilitator for erc7710 delegators.
+ */
+export async function makeSmartAccount7702(
+  publicClient: PublicClient,
+  owner: Account,
+): Promise<MetaMaskSmartAccount> {
+  return toMetaMaskSmartAccount({
+    client: publicClient,
+    implementation: Implementation.Stateless7702,
+    address: owner.address,
+    signer: { account: owner },
+  });
+}
+
+/**
+ * Upgrade an EOA to EIP7702StatelessDeleGator via a sponsored type-4 transaction:
+ * `owner` signs the authorization, `submitter` pays the gas. No-op if already upgraded.
+ */
+export async function ensure7702Upgraded(opts: {
+  publicClient: PublicClient;
+  owner: Account;
+  submitter: WalletClient;
+  chain: Chain;
+  delegatorImpl: `0x${string}`;
+}): Promise<"already-upgraded" | `0x${string}`> {
+  const expectedCode = `0xef0100${opts.delegatorImpl.slice(2).toLowerCase()}`;
+  const code = await opts.publicClient.getCode({ address: opts.owner.address });
+  if (code?.toLowerCase() === expectedCode) return "already-upgraded";
+
+  const selfExecuting = opts.submitter.account?.address === opts.owner.address;
+  const authorization = await opts.submitter.signAuthorization({
+    account: opts.owner,
+    contractAddress: opts.delegatorImpl,
+    // When the authorizing EOA submits its own type-4 tx, the authorization nonce
+    // must be bumped past the tx nonce or it is silently skipped.
+    ...(selfExecuting ? { executor: "self" as const } : {}),
+  });
+  const hash = await opts.submitter.sendTransaction({
+    account: opts.submitter.account!,
+    authorizationList: [authorization],
+    to: opts.owner.address,
+    data: "0x",
+    chain: opts.chain,
+  });
+  await opts.publicClient.waitForTransactionReceipt({ hash });
+  return hash;
+}
+
+/**
  * Deploy a smart account by calling its factory directly from a funded EOA
  * (no bundler/paymaster needed). No-op if already deployed.
  */
