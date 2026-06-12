@@ -492,6 +492,8 @@ button.go:disabled {
 .entry.error .badge { background: rgba(255, 92, 92, 0.16); color: var(--alarm); }
 .entry.result .badge { background: var(--phosphor); color: var(--ink); }
 .entry.relayer .badge { background: rgba(122, 162, 255, 0.16); color: #9db8ff; }
+.entry.a2a .badge { background: rgba(232, 121, 249, 0.16); color: #e879f9; }
+.entry.critique .badge { background: rgba(232, 121, 249, 0.16); color: #e879f9; }
 
 .entry.payment .amount,
 .entry.relayer .amount {

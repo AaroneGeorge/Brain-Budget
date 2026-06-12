@@ -28,20 +28,22 @@ function decodeSettlementTx(header: string): string | undefined {
 }
 
 /**
- * Payment-aware fetch for the agent. On a 402, the provider REDELEGATES the
- * user's budget delegation (user -> agent smart account) down to exactly the
- * required amount and hands the encoded two-hop chain to the facilitator.
- * The agent never holds the user's funds.
+ * Payment-aware fetch for an agent. On a 402, the provider REDELEGATES the
+ * delegation chain rooted at the user's budget down to exactly the required
+ * amount and hands the encoded chain to the facilitator. Two hops for the
+ * orchestrator (user -> agent -> payment), three for an A2A sub-agent
+ * (user -> agent -> critic -> payment). No agent ever holds the user's funds.
  */
 export function makePaidFetch(opts: {
   agentSmartAccount: MetaMaskSmartAccount;
-  userDelegation: SignedDelegation;
+  /** leaf-first: [delegation to agentSmartAccount, ..., root user delegation] */
+  delegationChain: SignedDelegation[];
   onPayment?: (event: PaymentEvent) => void;
 }): typeof fetch {
   const erc7710Client = new x402Erc7710Client({
     delegationProvider: createx402DelegationProvider({
       account: opts.agentSmartAccount,
-      parentPermissionContext: encodeDelegations([opts.userDelegation]),
+      parentPermissionContext: encodeDelegations(opts.delegationChain),
     }),
   });
 

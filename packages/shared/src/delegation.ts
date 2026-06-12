@@ -56,6 +56,56 @@ export async function createBudgetDelegation(
   return { ...delegation, signature };
 }
 
+export interface SubDelegationParams {
+  /** Sub-delegate address (e.g. the critic agent). */
+  to: `0x${string}`;
+  /** The redelegating agent — must be the delegate of the parent. */
+  delegator: MetaMaskSmartAccount;
+  parentDelegation: SignedDelegation;
+  usdc: `0x${string}`;
+  /** Narrowed budget in whole USDC — must be <= the parent's remaining cap. */
+  maxUsdc: string;
+  maxCalls: number;
+  validForSeconds: number;
+}
+
+/**
+ * A2A redelegation: the agent narrows its own delegated authority and hands a
+ * sub-budget to another agent. authority = hash(parent), so the chain only
+ * redeems if every hop's caveats pass — the sub-agent can never exceed what
+ * the original user granted.
+ */
+export async function createSubDelegation(
+  params: SubDelegationParams,
+): Promise<SignedDelegation> {
+  const now = Math.floor(Date.now() / 1000);
+  const salt = new Uint8Array(32);
+  crypto.getRandomValues(salt);
+  const delegation = createDelegation({
+    to: params.to,
+    from: params.delegator.address,
+    environment: params.delegator.environment,
+    parentDelegation: params.parentDelegation,
+    salt: `0x${Array.from(salt, (b) => b.toString(16).padStart(2, "0")).join("")}`,
+    scope: {
+      type: ScopeType.Erc20TransferAmount,
+      tokenAddress: params.usdc,
+      maxAmount: parseUnits(params.maxUsdc, 6),
+    },
+    caveats: [
+      { type: CaveatType.LimitedCalls, limit: params.maxCalls },
+      {
+        type: CaveatType.Timestamp,
+        afterThreshold: 0,
+        beforeThreshold: now + params.validForSeconds,
+      },
+    ],
+  });
+
+  const signature = await params.delegator.signDelegation({ delegation });
+  return { ...delegation, signature };
+}
+
 /** Calldata for redeeming a delegation as a USDC transfer of `amountUsdc` to `recipient`. */
 export function encodeUsdcRedemption(
   signedDelegation: SignedDelegation,

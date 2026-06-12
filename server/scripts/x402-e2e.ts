@@ -67,7 +67,7 @@ if (unpaid.status !== 402) process.exit(1);
 // 4b. paid request must 200 with settlement
 const paidFetch = makePaidFetch({
   agentSmartAccount,
-  userDelegation,
+  delegationChain: [userDelegation],
   onPayment: (event) => console.log(`payment settled: ${event.paymentResponse?.slice(0, 80)}...`),
 });
 const paid = await paidFetch(url, { method: "POST", headers, body });

@@ -1,6 +1,7 @@
 import { EventEmitter } from "node:events";
 import type { MetaMaskSmartAccount } from "@metamask/smart-accounts-kit";
-import type { SignedDelegation } from "@brainbudget/shared";
+import { hashDelegation } from "@metamask/smart-accounts-kit/utils";
+import { createSubDelegation, type SignedDelegation } from "@brainbudget/shared";
 import { makePaidFetch, type PaymentEvent } from "../buyer.js";
 import { INFERENCE_PRICE, chainConfig } from "../config.js";
 import {
@@ -13,9 +14,27 @@ import {
 export type AgentEvent =
   | { type: "status"; at: string; message: string }
   | { type: "plan"; at: string; queries: string[] }
-  | { type: "payment"; at: string; payment: PaymentEvent; spentUsd: number; budgetUsd: number }
+  | {
+      type: "payment";
+      at: string;
+      payment: PaymentEvent;
+      spentUsd: number;
+      budgetUsd: number;
+      actor?: "orchestrator" | "critic";
+    }
   | { type: "step"; at: string; query: string; answer: string }
   | { type: "budget-stop"; at: string; reason: string }
+  | {
+      type: "a2a";
+      at: string;
+      from: string;
+      to: string;
+      capUsd: number;
+      maxCalls: number;
+      authority: string;
+      message: string;
+    }
+  | { type: "critique"; at: string; review: string }
   | { type: "result"; at: string; report: string; spentUsd: number; calls: number }
   | {
       type: "relayer";
@@ -52,6 +71,8 @@ export function startResearch(opts: {
   userDelegation: SignedDelegation;
   /** when set, the agent invoices a completion fee from this account via 1Shot after the run */
   userSmartAccount?: MetaMaskSmartAccount;
+  /** when set, the orchestrator redelegates a narrowed sub-budget to this critic (A2A) */
+  criticSmartAccount?: MetaMaskSmartAccount;
 }): ResearchRun {
   const run: ResearchRun = {
     id: `run-${++runCounter}-${Date.now().toString(36)}`,
@@ -87,29 +108,34 @@ async function executeRun(
   let spentUsd = 0;
   let calls = 0;
 
+  const onPayment = (actor: "orchestrator" | "critic") => (payment: PaymentEvent) => {
+    spentUsd += PRICE_USD;
+    calls += 1;
+    emit(run, { type: "payment", at: now(), payment, spentUsd, budgetUsd: opts.budgetUsd, actor });
+  };
+
   const paidFetch = makePaidFetch({
     agentSmartAccount: opts.agentSmartAccount,
-    userDelegation: opts.userDelegation,
-    onPayment: (payment) => {
-      spentUsd += PRICE_USD;
-      calls += 1;
-      emit(run, { type: "payment", at: now(), payment, spentUsd, budgetUsd: opts.budgetUsd });
-    },
+    delegationChain: [opts.userDelegation],
+    onPayment: onPayment("orchestrator"),
   });
 
-  const ask = async (messages: { role: "system" | "user" | "assistant"; content: string }[]) => {
-    const response = await paidFetch(opts.inferenceUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages }),
-    });
-    if (response.status === 402) {
-      throw new BudgetExhausted("payment rejected by the caveat enforcer (budget or call limit reached)");
-    }
-    if (!response.ok) throw new Error(`inference failed: HTTP ${response.status}`);
-    const payload = (await response.json()) as { content: string };
-    return payload.content;
-  };
+  const askVia =
+    (fetcher: typeof fetch) =>
+    async (messages: { role: "system" | "user" | "assistant"; content: string }[]) => {
+      const response = await fetcher(opts.inferenceUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages }),
+      });
+      if (response.status === 402) {
+        throw new BudgetExhausted("payment rejected by the caveat enforcer (budget or call limit reached)");
+      }
+      if (!response.ok) throw new Error(`inference failed: HTTP ${response.status}`);
+      const payload = (await response.json()) as { content: string };
+      return payload.content;
+    };
+  const ask = askVia(paidFetch);
 
   const hasBudgetFor = (upcomingCalls: number) =>
     spentUsd + upcomingCalls * PRICE_USD <= opts.budgetUsd + 1e-9;
@@ -133,10 +159,11 @@ async function executeRun(
   emit(run, { type: "plan", at: now(), queries });
 
   // 2. research steps (1 paid call each), budget-aware
+  // reserve 1 call for synthesis, +1 for the critic when A2A is available
+  const reserved = opts.criticSmartAccount ? 3 : 2;
   const findings: { query: string; answer: string }[] = [];
   for (const query of queries) {
-    if (!hasBudgetFor(2)) {
-      // reserve 1 call for synthesis
+    if (!hasBudgetFor(reserved)) {
       emit(run, {
         type: "budget-stop",
         at: now(),
@@ -188,6 +215,60 @@ async function executeRun(
     }
   } else {
     report = fallbackReport(findings);
+  }
+
+  // 4. A2A: the orchestrator redelegates a narrowed sub-budget to the critic,
+  // which pays for its own review through the 3-hop chain user -> agent -> critic.
+  if (opts.criticSmartAccount && findings.length > 0 && hasBudgetFor(1)) {
+    try {
+      const subDelegation = await createSubDelegation({
+        to: opts.criticSmartAccount.address,
+        delegator: opts.agentSmartAccount,
+        parentDelegation: opts.userDelegation,
+        usdc: chainConfig.usdc,
+        maxUsdc: PRICE_USD.toFixed(6),
+        maxCalls: 1,
+        validForSeconds: 3600,
+      });
+      emit(run, {
+        type: "a2a",
+        at: now(),
+        from: opts.agentSmartAccount.address,
+        to: opts.criticSmartAccount.address,
+        capUsd: PRICE_USD,
+        maxCalls: 1,
+        authority: hashDelegation(opts.userDelegation),
+        message:
+          "orchestrator redelegates a narrowed sub-budget to the critic — authority chained to the user's original delegation, never exceeding it",
+      });
+      const criticAsk = askVia(
+        makePaidFetch({
+          agentSmartAccount: opts.criticSmartAccount,
+          delegationChain: [subDelegation, opts.userDelegation],
+          onPayment: onPayment("critic"),
+        }),
+      );
+      const review = await criticAsk([
+        {
+          role: "system",
+          content:
+            "You are a critical reviewer. In <=120 words, assess the research report: the strongest claim, the weakest claim, and one missing consideration.",
+        },
+        { role: "user", content: `Question: ${run.question}\n\nReport:\n${report}` },
+      ]);
+      emit(run, { type: "critique", at: now(), review });
+      report += `\n\n— Critic review (paid by the critic itself via A2A redelegation) —\n${review}`;
+    } catch (error) {
+      if (error instanceof BudgetExhausted) {
+        emit(run, { type: "budget-stop", at: now(), reason: `critic: ${error.message}` });
+      } else {
+        emit(run, {
+          type: "status",
+          at: now(),
+          message: `critic review skipped: ${(error as Error).message}`,
+        });
+      }
+    }
   }
 
   finish(run, report, spentUsd, calls);

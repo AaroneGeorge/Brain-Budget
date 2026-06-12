@@ -33,6 +33,7 @@ app.get("/state", async (_req, res) => {
     chain: { name: chainConfig.chain.name, id: chainConfig.chain.id },
     user: { address: actors.userSmartAccount.address, usdc: formatUnits(userUsdc, 6) },
     agent: { address: actors.agentSmartAccount.address },
+    critic: actors.criticSmartAccount ? { address: actors.criticSmartAccount.address } : null,
     gateway: { address: actors.gatewayEoa.address, venice, veniceMocked: veniceMocked() },
     payments: paymentLog.length,
   });
@@ -50,10 +51,13 @@ app.post("/research", async (req: Request, res: Response) => {
       return;
     }
 
-    // one-time: both EOAs must be 7702 smart accounts
+    // one-time: every delegator EOA must be a 7702 smart account
     const delegatorImpl =
       actors.userSmartAccount.environment.implementations.EIP7702StatelessDeleGatorImpl;
-    for (const owner of [actors.userEoa, actors.agentEoa]) {
+    const owners = [actors.userEoa, actors.agentEoa, actors.criticEoa].filter(
+      (a): a is NonNullable<typeof a> => Boolean(a),
+    );
+    for (const owner of owners) {
       await ensure7702Upgraded({
         publicClient,
         owner,
@@ -80,6 +84,7 @@ app.post("/research", async (req: Request, res: Response) => {
       agentSmartAccount: actors.agentSmartAccount,
       userDelegation,
       userSmartAccount: actors.userSmartAccount,
+      criticSmartAccount: actors.criticSmartAccount,
     });
 
     res.json({

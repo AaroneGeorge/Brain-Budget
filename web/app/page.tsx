@@ -12,9 +12,21 @@ type AgentEvent =
       payment: { url: string; status: number; paymentResponse?: string; txHash?: string };
       spentUsd: number;
       budgetUsd: number;
+      actor?: "orchestrator" | "critic";
     }
   | { type: "step"; at: string; query: string; answer: string }
   | { type: "budget-stop"; at: string; reason: string }
+  | {
+      type: "a2a";
+      at: string;
+      from: string;
+      to: string;
+      capUsd: number;
+      maxCalls: number;
+      authority: string;
+      message: string;
+    }
+  | { type: "critique"; at: string; review: string }
   | { type: "result"; at: string; report: string; spentUsd: number; calls: number }
   | {
       type: "relayer";
@@ -32,6 +44,7 @@ interface ServerState {
   chain: { name: string; id: number };
   user: { address: string; usdc: string };
   agent: { address: string };
+  critic: { address: string } | null;
   gateway: { address: string; veniceMocked: boolean };
 }
 
@@ -146,6 +159,12 @@ export default function Home() {
           <span className="k">agent (delegate)</span>
           <span className="v">{short(state?.agent.address)}</span>
         </div>
+        {state?.critic && (
+          <div className="tick">
+            <span className="k">critic (a2a)</span>
+            <span className="v">{short(state.critic.address)}</span>
+          </div>
+        )}
         <div className="tick">
           <span className="k">inference</span>
           <span className={`v${state?.gateway.veniceMocked ? " warn" : ""}`}>
@@ -303,10 +322,15 @@ function Entry({ event, explorer }: { event: AgentEvent; explorer?: string }) {
         )}
         {event.type === "payment" && (
           <>
-            <span className="badge">402 → paid</span>
+            <span className="badge">
+              402 → paid{event.actor === "critic" ? " · critic" : ""}
+            </span>
             <span className="amount">$0.01</span>{" "}
             <span className="body">
-              settled via erc-7710 redelegation · total ${event.spentUsd.toFixed(2)}
+              {event.actor === "critic"
+                ? "critic paid for its own review — 3-hop chain: user → agent → critic"
+                : "settled via erc-7710 redelegation"}{" "}
+              · total ${event.spentUsd.toFixed(2)}
             </span>
             {event.payment.txHash && explorer ? (
               <a
@@ -337,6 +361,23 @@ function Entry({ event, explorer }: { event: AgentEvent; explorer?: string }) {
           <>
             <span className="badge">caveat</span>
             <span className="body">{event.reason}</span>
+          </>
+        )}
+        {event.type === "a2a" && (
+          <>
+            <span className="badge">a2a · redelegate</span>
+            <span className="body">{event.message}</span>
+            <span className="settle">
+              {short(event.from)} → {short(event.to)} · cap ${event.capUsd.toFixed(2)} ·{" "}
+              {event.maxCalls} call · authority {event.authority.slice(0, 18)}…
+            </span>
+          </>
+        )}
+        {event.type === "critique" && (
+          <>
+            <span className="badge">critic</span>
+            <span className="q">sub-agent review</span>
+            <div className="body">{event.review}</div>
           </>
         )}
         {event.type === "relayer" && (

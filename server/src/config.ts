@@ -21,8 +21,10 @@ export interface Actors {
   userEoa: Account;
   agentEoa: Account;
   gatewayEoa: Account;
+  criticEoa: Account | undefined;
   userSmartAccount: MetaMaskSmartAccount;
   agentSmartAccount: MetaMaskSmartAccount;
+  criticSmartAccount: MetaMaskSmartAccount | undefined;
   agentWallet: WalletClient;
 }
 
@@ -33,13 +35,21 @@ export function getActors(): Promise<Actors> {
     const userEoa = accountFromEnv("USER_PRIVATE_KEY");
     const agentEoa = accountFromEnv("AGENT_PRIVATE_KEY");
     const gatewayEoa = accountFromEnv("GATEWAY_PRIVATE_KEY");
+    // optional A2A sub-agent
+    const criticEoa = process.env.CRITIC_PRIVATE_KEY
+      ? accountFromEnv("CRITIC_PRIVATE_KEY")
+      : undefined;
     return {
       userEoa,
       agentEoa,
       gatewayEoa,
+      criticEoa,
       // 7702-upgraded EOAs: required by the MetaMask x402 facilitator for erc7710.
       userSmartAccount: await makeSmartAccount7702(publicClient, userEoa),
       agentSmartAccount: await makeSmartAccount7702(publicClient, agentEoa),
+      criticSmartAccount: criticEoa
+        ? await makeSmartAccount7702(publicClient, criticEoa)
+        : undefined,
       agentWallet: makeWalletClient(chainConfig, agentEoa),
     };
   })();
