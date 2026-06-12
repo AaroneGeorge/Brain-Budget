@@ -1,5 +1,19 @@
 import type { Metadata } from "next";
+import { Fraunces, Spline_Sans_Mono } from "next/font/google";
 import "./globals.css";
+
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-display",
+  weight: ["400", "600", "700", "900"],
+  style: ["normal", "italic"],
+});
+
+const splineMono = Spline_Sans_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+  weight: ["300", "400", "500", "600", "700"],
+});
 
 export const metadata: Metadata = {
   title: "BrainBudget — a research agent that pays for its own brain",
@@ -10,7 +24,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className={`${fraunces.variable} ${splineMono.variable}`}>{children}</body>
     </html>
   );
 }
