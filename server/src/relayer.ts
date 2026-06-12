@@ -84,6 +84,8 @@ export async function claimBudgetViaRelayer(opts: {
   amountUsdc: string;
   webhookUrl?: string;
   memo?: string;
+  /** EIP-7702 authorizations to bundle into the relayer's type-4 tx (gasless upgrades) */
+  authorizationList?: unknown[];
 }): Promise<ClaimResult> {
   const caps = await getCapabilities();
   const usdc = caps.tokens.find((t) => t.symbol === "USDC");
@@ -127,6 +129,7 @@ export async function claimBudgetViaRelayer(opts: {
     ];
     return {
       chainId: String(chainConfig.chain.id),
+      ...(opts.authorizationList?.length ? { authorizationList: opts.authorizationList } : {}),
       transactions: [
         { permissionContext: [toRelayerJson(signedDelegation)], executions },
       ],

@@ -152,7 +152,7 @@ pnpm dev                    # web UI on :3000, server on :4021
 ```
 
 - **Base Sepolia (free):** ETH from any Base Sepolia faucet, test USDC from [Circle's faucet](https://faucet.circle.com/). Set `CHAIN=baseSepolia`.
-- **Base mainnet (the real demo):** fund the user account with ~$10 USDC and the gateway wallet with ~$5 USDC (one-time Venice x402 top-up). Set `CHAIN=base`. Total cost of a full demo run: well under $1 of actual burn — Venice is ~$0.002/request and 1Shot is ~$0.01/tx.
+- **Base mainnet (the real demo):** fund the user account with ~$10 USDC and the gateway wallet with ~$5 USDC (one-time Venice x402 top-up). Set `CHAIN=base`. **Zero ETH needed anywhere** — even the one-time EIP-7702 upgrades ride through the 1Shot relayer with gas paid in USDC (`server/scripts/relayer-7702-e2e.ts` proves the full zero-ETH bootstrap: three fresh accounts upgraded + first claim, all gasless). Total cost of a full demo run: well under $1 of actual burn — Venice is ~$0.002/request and 1Shot is ~$0.01/tx.
 - The e2e script asserts: ≥2 x402 payments settled, Venice responses non-empty, spend ≤ cap, and the over-budget request **correctly refused**.
 
 ## What we'd build next

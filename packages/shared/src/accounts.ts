@@ -102,6 +102,53 @@ export async function ensure7702Upgraded(opts: {
   return hash;
 }
 
+/** Plain-JSON EIP-7702 authorization entry, as the 1Shot relayer expects it. */
+export interface AuthorizationEntry {
+  address: `0x${string}`;
+  chainId: number;
+  nonce: number;
+  r: `0x${string}`;
+  s: `0x${string}`;
+  yParity: number;
+}
+
+/**
+ * Sign a 7702 authorization for `owner` to be submitted by a third party
+ * (e.g. the 1Shot relayer) — zero ETH needed on the owner. Returns undefined
+ * if the EOA already runs the delegator implementation.
+ */
+export async function build7702AuthorizationEntry(opts: {
+  publicClient: PublicClient;
+  owner: Account;
+  chainId: number;
+  delegatorImpl: `0x${string}`;
+}): Promise<AuthorizationEntry | undefined> {
+  const expectedCode = `0xef0100${opts.delegatorImpl.slice(2).toLowerCase()}`;
+  const code = await opts.publicClient.getCode({ address: opts.owner.address });
+  if (code?.toLowerCase() === expectedCode) return undefined;
+  if (!opts.owner.signAuthorization) {
+    throw new Error("owner account does not support signAuthorization");
+  }
+
+  const nonce = await opts.publicClient.getTransactionCount({
+    address: opts.owner.address,
+    blockTag: "pending",
+  });
+  const auth = await opts.owner.signAuthorization({
+    chainId: opts.chainId,
+    contractAddress: opts.delegatorImpl,
+    nonce,
+  });
+  return {
+    address: auth.address,
+    chainId: auth.chainId,
+    nonce: auth.nonce,
+    r: auth.r,
+    s: auth.s,
+    yParity: auth.yParity ?? 0,
+  };
+}
+
 /**
  * Deploy a smart account by calling its factory directly from a funded EOA
  * (no bundler/paymaster needed). No-op if already deployed.

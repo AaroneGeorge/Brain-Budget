@@ -42,6 +42,19 @@ Each entry: what we tried, what happened, what would have helped.
   siblings `createDelegation`/`signDelegation` live on the package root. Minor, but the
   asymmetry costs a round-trip to the type declarations.
 
+## 1Shot relayer notes
+
+- **`authorizationList` accepts exactly one entry per task** (`Authorization list must
+  contain exactly one entry`). Onboarding a multi-agent system (user + orchestrator + critic,
+  all zero-ETH) therefore takes one chained task per account instead of one type-4 tx with
+  three authorizations — which the EIP itself would allow. If this is an internal constraint,
+  documenting it would help; if not, batching would make multi-agent bootstrap one task.
+- **A delegation signed by a not-yet-upgraded 7702 account verifies in the same tx as its
+  authorization.** We signed `signDelegation` from a codeless EOA, submitted it with the
+  EIP-7702 authorization in one relayer task, and redemption succeeded. Excellent property —
+  worth stating in the docs because it's the difference between "bootstrap then delegate"
+  (two steps) and true one-shot onboarding.
+
 ## Wins worth keeping
 
 - `llms-smart-accounts-kit-full.txt` is excellent for context-loading coding agents — single
