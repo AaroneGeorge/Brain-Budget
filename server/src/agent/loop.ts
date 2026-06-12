@@ -2,7 +2,13 @@ import { EventEmitter } from "node:events";
 import type { MetaMaskSmartAccount } from "@metamask/smart-accounts-kit";
 import type { SignedDelegation } from "@brainbudget/shared";
 import { makePaidFetch, type PaymentEvent } from "../buyer.js";
-import { INFERENCE_PRICE } from "../config.js";
+import { INFERENCE_PRICE, chainConfig } from "../config.js";
+import {
+  claimBudgetViaRelayer,
+  relayerTxHash,
+  waitForRelayerTask,
+  type RelayerStatus,
+} from "../relayer.js";
 
 export type AgentEvent =
   | { type: "status"; at: string; message: string }
@@ -11,6 +17,16 @@ export type AgentEvent =
   | { type: "step"; at: string; query: string; answer: string }
   | { type: "budget-stop"; at: string; reason: string }
   | { type: "result"; at: string; report: string; spentUsd: number; calls: number }
+  | {
+      type: "relayer";
+      at: string;
+      phase: "claiming" | "submitted" | "confirmed" | "failed" | "webhook";
+      message: string;
+      taskId?: string;
+      feeUsd?: number;
+      amountUsd?: number;
+      txUrl?: string;
+    }
   | { type: "error"; at: string; message: string };
 
 export interface ResearchRun {
@@ -34,6 +50,8 @@ export function startResearch(opts: {
   inferenceUrl: string;
   agentSmartAccount: MetaMaskSmartAccount;
   userDelegation: SignedDelegation;
+  /** when set, the agent invoices a completion fee from this account via 1Shot after the run */
+  userSmartAccount?: MetaMaskSmartAccount;
 }): ResearchRun {
   const run: ResearchRun = {
     id: `run-${++runCounter}-${Date.now().toString(36)}`,
@@ -43,11 +61,17 @@ export function startResearch(opts: {
     done: false,
   };
   runs.set(run.id, run);
-  void executeRun(run, opts).catch((error) => {
-    emit(run, { type: "error", at: now(), message: (error as Error).message });
-    run.done = true;
-    run.emitter.emit("done");
-  });
+  void (async () => {
+    try {
+      await executeRun(run, opts);
+      await claimCompletionFee(run, opts);
+    } catch (error) {
+      emit(run, { type: "error", at: now(), message: (error as Error).message });
+    } finally {
+      run.done = true;
+      run.emitter.emit("done");
+    }
+  })();
   return run;
 }
 
@@ -171,8 +195,107 @@ async function executeRun(
 
 function finish(run: ResearchRun, report: string, spentUsd: number, calls: number) {
   emit(run, { type: "result", at: now(), report, spentUsd, calls });
-  run.done = true;
-  run.emitter.emit("done");
+}
+
+/**
+ * After a delivered run, the agent invoices a small completion fee from the
+ * user's account — redeemed gaslessly through the 1Shot relayer, gas paid in
+ * USDC inside the same delegation bundle. memo = run id so incoming webhooks
+ * correlate back to this run's event stream.
+ */
+const COMPLETION_FEE_USD = 0.01;
+
+async function claimCompletionFee(
+  run: ResearchRun,
+  opts: Parameters<typeof startResearch>[0],
+): Promise<void> {
+  if (!opts.userSmartAccount) return;
+  const paidCalls = run.events.filter((e) => e.type === "payment").length;
+  if (paidCalls === 0) return;
+
+  emit(run, {
+    type: "relayer",
+    at: now(),
+    phase: "claiming",
+    amountUsd: COMPLETION_FEE_USD,
+    message: `agent invoices a $${COMPLETION_FEE_USD.toFixed(2)} completion fee — gasless claim via 1Shot relayer, gas paid in USDC`,
+  });
+
+  try {
+    const claim = await claimBudgetViaRelayer({
+      userSmartAccount: opts.userSmartAccount,
+      recipient: opts.agentSmartAccount.address,
+      amountUsdc: COMPLETION_FEE_USD.toFixed(2),
+      memo: run.id,
+      webhookUrl: process.env.RELAYER_WEBHOOK_URL,
+    });
+    relayerTasks.set(claim.taskId, run);
+    const feeUsd = Number(claim.feeUsdcAtoms) / 1e6;
+    emit(run, {
+      type: "relayer",
+      at: now(),
+      phase: "submitted",
+      taskId: claim.taskId,
+      feeUsd,
+      amountUsd: COMPLETION_FEE_USD,
+      message: `task submitted to 1Shot — relayer fee $${feeUsd.toFixed(2)} USDC bundled in the same delegation, zero ETH`,
+    });
+
+    const status = await waitForRelayerTask(claim.taskId);
+    const txHash = relayerTxHash(status);
+    if (status.status === 200) {
+      emit(run, {
+        type: "relayer",
+        at: now(),
+        phase: "confirmed",
+        taskId: claim.taskId,
+        feeUsd,
+        amountUsd: COMPLETION_FEE_USD,
+        txUrl: txHash ? chainConfig.explorerTxUrl(txHash) : undefined,
+        message: "completion fee confirmed on-chain via 1Shot",
+      });
+    } else {
+      emit(run, {
+        type: "relayer",
+        at: now(),
+        phase: "failed",
+        taskId: claim.taskId,
+        message: `relayer task ended with status ${status.status}`,
+      });
+    }
+  } catch (error) {
+    emit(run, {
+      type: "relayer",
+      at: now(),
+      phase: "failed",
+      message: `1Shot claim failed: ${(error as Error).message}`,
+    });
+  }
+}
+
+/** taskId -> run, for webhook correlation (memo carries the run id as backup) */
+export const relayerTasks = new Map<string, ResearchRun>();
+
+/** Feed a verified 1Shot webhook into the matching run's event stream. */
+export function handleRelayerWebhook(webhook: {
+  type: number;
+  data: RelayerStatus & { id?: string; memo?: string };
+}): boolean {
+  const taskId = String(webhook.data.id ?? "");
+  const run = relayerTasks.get(taskId) ?? (webhook.data.memo ? runs.get(webhook.data.memo) : undefined);
+  if (!run) return false;
+  const label =
+    webhook.type === 4 ? "submitted on-chain" : webhook.type === 0 ? "confirmed" : "failed";
+  const txHash = relayerTxHash(webhook.data);
+  emit(run, {
+    type: "relayer",
+    at: now(),
+    phase: "webhook",
+    taskId,
+    txUrl: txHash ? chainConfig.explorerTxUrl(txHash) : undefined,
+    message: `1Shot webhook: ${label} (Ed25519 signature verified)`,
+  });
+  return true;
 }
 
 function fallbackReport(findings: { query: string; answer: string }[]): string {

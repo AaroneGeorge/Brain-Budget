@@ -491,8 +491,10 @@ button.go:disabled {
 .entry.budget-stop .badge { background: rgba(255, 92, 92, 0.16); color: var(--alarm); }
 .entry.error .badge { background: rgba(255, 92, 92, 0.16); color: var(--alarm); }
 .entry.result .badge { background: var(--phosphor); color: var(--ink); }
+.entry.relayer .badge { background: rgba(122, 162, 255, 0.16); color: #9db8ff; }
 
-.entry.payment .amount {
+.entry.payment .amount,
+.entry.relayer .amount {
   color: var(--amber);
   font-weight: 700;
 }
@@ -524,6 +526,17 @@ button.go:disabled {
   font-size: 10px;
   color: var(--muted);
   word-break: break-all;
+}
+
+a.tx-link {
+  color: var(--phosphor);
+  text-decoration: none;
+  border-bottom: 1px dotted var(--phosphor-dim);
+  transition: border-color 0.15s ease;
+}
+
+a.tx-link:hover {
+  border-bottom-color: var(--phosphor);
 }
 
 /* ---------- report ---------- */

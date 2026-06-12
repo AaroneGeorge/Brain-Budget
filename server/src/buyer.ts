@@ -11,6 +11,20 @@ export interface PaymentEvent {
   url: string;
   status: number;
   paymentResponse?: string;
+  /** settlement tx hash decoded from the PAYMENT-RESPONSE header, if present */
+  txHash?: string;
+}
+
+/** PAYMENT-RESPONSE is base64-encoded JSON: { success, transaction, network, payer } */
+function decodeSettlementTx(header: string): string | undefined {
+  try {
+    const decoded = JSON.parse(Buffer.from(header, "base64").toString("utf8")) as {
+      transaction?: string;
+    };
+    return typeof decoded.transaction === "string" ? decoded.transaction : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -44,6 +58,7 @@ export function makePaidFetch(opts: {
         url: typeof input === "string" ? input : input instanceof URL ? input.href : input.url,
         status: response.status,
         paymentResponse,
+        txHash: decodeSettlementTx(paymentResponse),
       });
     }
     return response;

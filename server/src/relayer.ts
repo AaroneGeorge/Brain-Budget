@@ -9,7 +9,7 @@ import { bytesToHex } from "viem/utils";
 import { chainConfig } from "./config.js";
 
 const RELAYER_URL = chainConfig.oneShotRelayerUrl;
-const JWKS_URL = "https://relayer.1shotapi.com/.well-known/jwks.json";
+const JWKS_URL = new URL("/.well-known/jwks.json", RELAYER_URL).toString();
 
 let rpcId = 0;
 
@@ -162,10 +162,15 @@ export async function claimBudgetViaRelayer(opts: {
 export interface RelayerStatus {
   status: number;
   hash?: string;
-  receipt?: unknown;
+  receipt?: { transactionHash?: string; [key: string]: unknown };
   message?: string;
   memo?: string;
   [key: string]: unknown;
+}
+
+/** tx hash regardless of task state: `hash` while pending, `receipt.transactionHash` once confirmed */
+export function relayerTxHash(status: RelayerStatus): string | undefined {
+  return status.hash ?? status.receipt?.transactionHash;
 }
 
 export async function getRelayerStatus(taskId: string): Promise<RelayerStatus> {
@@ -210,11 +215,14 @@ function stableStringify(value: unknown): string {
   return JSON.stringify(value);
 }
 
-export async function verifyRelayerWebhook(body: Record<string, unknown>): Promise<boolean> {
+export async function verifyRelayerWebhook(
+  body: Record<string, unknown>,
+  jwksOverride?: Jwk[],
+): Promise<boolean> {
   const { signature, ...rest } = body;
   const keyId = (body as { keyId?: string }).keyId;
   if (typeof signature !== "string") return false;
-  const keys = await getJwks();
+  const keys = jwksOverride ?? (await getJwks());
   const jwk = (keyId ? keys.find((k) => k.kid === keyId) : keys[0]) ?? keys[0];
   if (!jwk?.x) return false;
   const publicKey = createPublicKey({ key: { kty: "OKP", crv: "Ed25519", x: jwk.x }, format: "jwk" });

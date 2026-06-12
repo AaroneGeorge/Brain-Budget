@@ -5,7 +5,8 @@ import { erc20Abi, formatUnits } from "viem";
 import { createBudgetDelegation, ensure7702Upgraded } from "@brainbudget/shared";
 import { SERVER_PORT, chainConfig, getActors, publicClient } from "./config.js";
 import { makeGateway, paymentLog } from "./gateway.js";
-import { runs, startResearch } from "./agent/loop.js";
+import { handleRelayerWebhook, runs, startResearch } from "./agent/loop.js";
+import { verifyRelayerWebhook } from "./relayer.js";
 import { veniceBalance, veniceMocked } from "./venice.js";
 
 const app = express();
@@ -78,6 +79,7 @@ app.post("/research", async (req: Request, res: Response) => {
       inferenceUrl: `http://localhost:${SERVER_PORT}/paid/inference`,
       agentSmartAccount: actors.agentSmartAccount,
       userDelegation,
+      userSmartAccount: actors.userSmartAccount,
     });
 
     res.json({
@@ -120,6 +122,23 @@ app.get("/research/:id/events", (req: Request, res: Response) => {
     run.emitter.off("event", onEvent);
     run.emitter.off("done", onDone);
   });
+});
+
+// 1Shot status webhooks (set RELAYER_WEBHOOK_URL to a public tunnel of this route)
+app.post("/relayer/webhook", async (req: Request, res: Response) => {
+  try {
+    const body = req.body as Record<string, unknown>;
+    if (!(await verifyRelayerWebhook(body))) {
+      res.status(401).json({ error: "Ed25519 signature verification failed" });
+      return;
+    }
+    const matched = handleRelayerWebhook(
+      body as unknown as Parameters<typeof handleRelayerWebhook>[0],
+    );
+    res.json({ ok: true, matched });
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
 });
 
 app.get("/health", (_req, res) => {

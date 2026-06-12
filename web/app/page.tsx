@@ -9,13 +9,23 @@ type AgentEvent =
   | {
       type: "payment";
       at: string;
-      payment: { url: string; status: number; paymentResponse?: string };
+      payment: { url: string; status: number; paymentResponse?: string; txHash?: string };
       spentUsd: number;
       budgetUsd: number;
     }
   | { type: "step"; at: string; query: string; answer: string }
   | { type: "budget-stop"; at: string; reason: string }
   | { type: "result"; at: string; report: string; spentUsd: number; calls: number }
+  | {
+      type: "relayer";
+      at: string;
+      phase: "claiming" | "submitted" | "confirmed" | "failed" | "webhook";
+      message: string;
+      taskId?: string;
+      feeUsd?: number;
+      amountUsd?: number;
+      txUrl?: string;
+    }
   | { type: "error"; at: string; message: string };
 
 interface ServerState {
@@ -34,6 +44,10 @@ interface DelegationView {
 
 const short = (a?: string) => (a ? `${a.slice(0, 6)}…${a.slice(-4)}` : "—");
 const clock = (iso: string) => new Date(iso).toLocaleTimeString("en-GB", { hour12: false });
+const EXPLORERS: Record<number, string> = {
+  8453: "https://basescan.org/tx/",
+  84532: "https://sepolia.basescan.org/tx/",
+};
 
 export default function Home() {
   const [state, setState] = useState<ServerState | null>(null);
@@ -243,7 +257,7 @@ export default function Home() {
               )}
 
               {events.map((event, i) => (
-                <Entry key={i} event={event} />
+                <Entry key={i} event={event} explorer={state ? EXPLORERS[state.chain.id] : undefined} />
               ))}
 
               {result?.type === "result" && (
@@ -264,7 +278,7 @@ export default function Home() {
   );
 }
 
-function Entry({ event }: { event: AgentEvent }) {
+function Entry({ event, explorer }: { event: AgentEvent; explorer?: string }) {
   const cls = event.type;
   return (
     <div className={`entry ${cls}`}>
@@ -294,8 +308,21 @@ function Entry({ event }: { event: AgentEvent }) {
             <span className="body">
               settled via erc-7710 redelegation · total ${event.spentUsd.toFixed(2)}
             </span>
-            {event.payment.paymentResponse && (
-              <span className="settle">settlement: {event.payment.paymentResponse.slice(0, 64)}…</span>
+            {event.payment.txHash && explorer ? (
+              <a
+                className="settle tx-link"
+                href={`${explorer}${event.payment.txHash}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                settlement tx: {short(event.payment.txHash)} ↗ basescan
+              </a>
+            ) : (
+              event.payment.paymentResponse && (
+                <span className="settle">
+                  settlement: {event.payment.paymentResponse.slice(0, 64)}…
+                </span>
+              )
             )}
           </>
         )}
@@ -310,6 +337,20 @@ function Entry({ event }: { event: AgentEvent }) {
           <>
             <span className="badge">caveat</span>
             <span className="body">{event.reason}</span>
+          </>
+        )}
+        {event.type === "relayer" && (
+          <>
+            <span className="badge">1shot · {event.phase}</span>
+            {event.amountUsd !== undefined && (
+              <span className="amount">${event.amountUsd.toFixed(2)}</span>
+            )}{" "}
+            <span className="body">{event.message}</span>
+            {event.txUrl && (
+              <a className="settle tx-link" href={event.txUrl} target="_blank" rel="noreferrer">
+                claim tx ↗ basescan
+              </a>
+            )}
           </>
         )}
         {event.type === "error" && (
