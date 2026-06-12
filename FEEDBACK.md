@@ -30,8 +30,26 @@ Each entry: what we tried, what happened, what would have helped.
   (another wallet pays gas — the common onboarding case, and what relayers like 1Shot do), the
   `executor: 'self'` nonce nuance inverts and a wrong combination is *silently skipped* by the
   chain rather than reverting. A note in the quickstart would help.
+- **`parentPermissionContext` ordering is undocumented.** `createx402DelegationProvider`
+  (experimental) accepts a `parentPermissionContext` for redelegation chains, but nothing says
+  which way the array runs. We had to read the dist source to learn it's **leaf-first**:
+  `existingDelegations[0]` is treated as the immediate parent and the *last* element's
+  delegator as the root. Passing `[userDelegation, subDelegation]` instead of
+  `[subDelegation, userDelegation]` builds a chain that fails at verify with no hint why.
+  One sentence in the typedoc ("ordered from immediate parent to root") would fix this.
+  (Found June 12 while building the A2A 3-hop chain.)
+- **`hashDelegation` is only exported from `@metamask/smart-accounts-kit/utils`,** while its
+  siblings `createDelegation`/`signDelegation` live on the package root. Minor, but the
+  asymmetry costs a round-trip to the type declarations.
 
 ## Wins worth keeping
 
 - `llms-smart-accounts-kit-full.txt` is excellent for context-loading coding agents — single
   410KB file covered nearly every question we had.
+- **The facilitator settles 3-hop delegation chains out of the box.** We redelegated
+  user → agent → critic and the critic's x402 payment (with
+  `parentPermissionContext = [subDelegation, userDelegation]`) verified and settled first try
+  on Base Sepolia. A2A coordination needs zero special-casing — worth advertising loudly.
+- `createDelegation({ parentDelegation, scope })` narrowing + on-chain authority chaining is a
+  genuinely clean primitive: the sub-agent's cap can never exceed the user's original grant,
+  and that's enforced by the DelegationManager, not by our code.

@@ -12,19 +12,21 @@ BrainBudget is an autonomous research agent with **no API keys and no custody of
 
 ## How it works (user's view)
 
-1. **Fund** — the app creates a headless MetaMask smart account (Hybrid implementation) for the user, holding USDC on Base. (Headless/embedded by design — the Smart Accounts Kit is signer-agnostic, so the same flow works with the MetaMask extension, Embedded Wallets, Dynamic, or Privy.)
+1. **Fund** — the app upgrades a burner EOA into a MetaMask smart account via **EIP-7702** (`Implementation.Stateless7702` — the MetaMask x402 facilitator requires 7702-upgraded EOAs as delegators), holding USDC on Base. (Headless/embedded by design — the Smart Accounts Kit is signer-agnostic, so the same flow works with the MetaMask extension, Embedded Wallets, Dynamic, or Privy.)
 2. **Delegate** — one click grants the agent a delegation: `max 5 USDC` (ERC-20 transfer-amount scope) + `max 20 redemptions` (limited-calls caveat) + `expires in 24h` (timestamp caveat). The signed delegation JSON is displayed — this is the *entire* trust artifact; no keys change hands.
 3. **Ask** — type a research question.
 4. **Watch it work** — the agent plans, then runs research steps. Each step is a paid x402 request: the UI shows the `402 Payment Required` challenge, the delegation-backed payment, settlement, and the Venice AI response streaming in.
 5. **Spend meter** — a live budget bar tracks every cent against the 5 USDC cap, with links to settlement transactions on BaseScan.
 6. **Caveat enforcement, on camera** — when the budget (or call limit) is exhausted, the next payment is **rejected on-chain by the caveat enforcer**. The agent detects this, stops gracefully, and reports what it spent. The delegation fails *closed*.
-7. **Result** — a synthesized, cited research report, plus a receipt: total spent, calls made, budget remaining.
+7. **A2A review** — before delivering, the orchestrator **redelegates** a narrowed $0.01 / 1-call sub-budget to a critic sub-agent. The critic pays for its *own* review inference through the three-hop chain `user → agent → critic → facilitator` — authority cryptographically chained to your original grant, never exceeding it.
+8. **Result** — a synthesized research report with the critic's review appended, plus a receipt: total spent, calls made, budget remaining.
+9. **The agent invoices you** — a $0.01 completion fee, claimed **gaslessly via the 1Shot relayer** (relayer fee paid in USDC inside the same delegation bundle; zero ETH anywhere). Status streams live: claiming → submitted → confirmed, with the BaseScan link.
 
 ## Architecture
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
-│  USER smart account (MetaMask Hybrid, headless)          [Base]          │
+│  USER smart account (EIP-7702 upgraded EOA, headless)    [Base]          │
 │   └── signs ERC-7710 delegation                                          │
 │        scope: ERC-20 transfer ≤ 5 USDC                                   │
 │        caveats: limitedCalls ≤ 20, timestamp ≤ +24h                      │
@@ -32,13 +34,16 @@ BrainBudget is an autonomous research agent with **no API keys and no custody of
                 │ delegation (signed JSON — no keys, no custody)
                 ▼
 ┌──────────────────────────────────────────────────────────────────────────┐
-│  AGENT (Node service, own smart account)                                 │
-│   ├── budget claim: redeemDelegations relayed by 1SHOT permissionless    │
-│   │   mainnet relayer — gas paid in USDC (~$0.01), EIP-7702 authz,       │
-│   │   Ed25519-signed status webhooks streamed to the UI                  │
-│   ├── research loop: plan → query → critique → synthesize                │
-│   └── pays for every LLM call via x402 with                              │
-│       assetTransferMethod: "erc7710"  (@metamask/x402 buyer client)      │
+│  AGENT (Node service, own 7702 smart account)                            │
+│   ├── research loop: plan → query → synthesize → critique                │
+│   ├── pays for every LLM call via x402 with                              │
+│   │   assetTransferMethod: "erc7710"  (@metamask/x402 buyer client)      │
+│   ├── A2A: redelegates a narrowed $0.01 sub-budget to a CRITIC           │
+│   │   sub-agent, which pays for its own review through the 3-hop         │
+│   │   chain user → agent → critic → facilitator                          │
+│   └── completion fee: redeemDelegations relayed by 1SHOT permissionless  │
+│       relayer — gas paid in USDC (~$0.01), estimate-first price lock,    │
+│       Ed25519-signed status webhooks streamed to the UI                  │
 └───────────────┬──────────────────────────────────────────────────────────┘
                 │ HTTP request → 402 → X-402-Payment (delegation payload)
                 ▼
@@ -78,14 +83,15 @@ So the full chain is: *user's caveated delegation → per-request erc7710 microp
 
 | Layer | What | How |
 |---|---|---|
-| Smart accounts | Headless MetaMask smart accounts for user + agent | `@metamask/smart-accounts-kit` → `toMetaMaskSmartAccount({ implementation: Implementation.Hybrid, ... })`, viem clients, no extension required |
+| Smart accounts | Headless 7702 smart accounts for user, agent + critic | `@metamask/smart-accounts-kit` → `toMetaMaskSmartAccount({ implementation: Implementation.Stateless7702, address: eoa.address })` after an EIP-7702 authorization upgrades each EOA (the facilitator rejects non-7702 delegators — see FEEDBACK.md) |
 | Delegation | Scoped budget grant | `createDelegation({ scope: { type: ScopeType.Erc20TransferAmount, tokenAddress: USDC, maxAmount: 5_000_000n }, caveats: [limitedCalls(20), timestamp(+24h)] })` → `signDelegation` |
 | x402 buyer (agent) | Pay per request with the delegation | `@x402/fetch` `wrapFetchWithPayment` + `x402Erc7710Client` fed by `createx402DelegationProvider` (`@metamask/smart-accounts-kit/experimental`) |
 | x402 seller (gateway) | Paywall the inference route | `@x402/express` `paymentMiddleware`, route priced `$0.01`, `extra: { assetTransferMethod: 'erc7710' }`, `x402ResourceServer` + `x402ExactEvmErc7710ServerScheme` |
 | Facilitator | Verify + settle erc7710 payments | MetaMask tx-sentinel facilitator (Base / Base Sepolia) |
 | Venice payment | Pay for inference, no API key | `venice-x402-client`: x402 USDC top-up on Base + SIWE (`X-Sign-In-With-X`) authenticated, OpenAI-compatible `chat/completions` with streaming; `X-Balance-Remaining` surfaced in UI |
 | Gasless relaying | Budget-claim redemptions | 1Shot permissionless relayer (JSON-RPC, no signup): `relayer_getCapabilities` → `relayer_estimate7710Transaction` → `relayer_send7710Transaction`; fee paid in USDC inside the same delegation bundle; `destinationUrl` webhooks (Ed25519-verified against the relayer's JWKS) streamed to the UI |
-| Agent loop | Budget-aware autonomy | plan → N research queries → synthesis; checks remaining budget before each step, stops under threshold, reports spend; execution always `ExecutionMode.SingleDefault` (several caveats are incompatible with batch mode) |
+| Agent loop | Budget-aware autonomy | plan → N research queries → synthesis → A2A critique; checks remaining budget before each step (reserving calls for synthesis + critic), stops under threshold, reports spend; execution always `ExecutionMode.SingleDefault` (several caveats are incompatible with batch mode) |
+| A2A redelegation | Critic sub-agent pays for itself | `createDelegation({ parentDelegation, scope: Erc20TransferAmount($0.01), caveats: [limitedCalls(1), timestamp(+1h)] })` signed by the agent; the critic's x402 buyer carries `parentPermissionContext = [subDelegation, userDelegation]` (leaf-first) and the facilitator settles the **3-hop chain** on-chain |
 
 ### Networks & key addresses
 
@@ -115,11 +121,11 @@ FEEDBACK.md       Smart Accounts Kit DX notes collected while building (Feedback
 
 | Track | Where to look |
 |---|---|
-| **Best x402 + ERC-7710** | Every agent inference call is an x402 payment with `assetTransferMethod: 'erc7710'` — buyer: `server/src/agent/paidFetch.ts`, seller: `server/src/gateway/`, settled by the MetaMask facilitator redeeming the user's caveated delegation. Demo video 1:20–2:10. Not cosmetic: remove the delegation and the agent cannot think. |
-| **Best Agent** | The agent autonomously plans, buys its own inference, tracks its budget, stops when the caveat enforcer says no, and reports spend (`server/src/agent/loop.ts`). Smart Accounts Kit is the agent's *only* spending mechanism. |
-| **Best use of Venice AI** | 100% of inference is Venice (`llama-3.3-70b` + a cheap model for planning), paid via Venice's **native x402** endpoint with wallet auth — no API key in the entire stack. Venice's no-data-retention privacy is the right substrate for an agent processing your research. Primary demo flow throughout the video. |
-| **1Shot Permissionless Relayer** | Budget-claim `redeemDelegations` are relayed on **Base mainnet** via `relayer_send7710Transaction`, gas paid in USDC, with **Ed25519-verified webhook status** shown live in the UI (`server/src/relayer/`). Demo video 0:50–1:20. |
-| **A2A Coordination** *(stretch)* | The orchestrator **redelegates** a narrowed sub-budget (1 USDC, fewer calls, same expiry) to a critic sub-agent that independently pays for its own inference — a two-hop delegation chain with narrowing caveats. |
+| **Best x402 + ERC-7710** | Every agent inference call is an x402 payment with `assetTransferMethod: 'erc7710'` — buyer: `server/src/buyer.ts`, seller: `server/src/gateway.ts`, settled by the MetaMask facilitator redeeming the user's caveated delegation. Demo video 1:20–2:10. Not cosmetic: remove the delegation and the agent cannot think. |
+| **Best Agent** | The agent autonomously plans, buys its own inference, tracks its budget, stops when the caveat enforcer says no, delegates review to a sub-agent, invoices its fee, and reports spend (`server/src/agent/loop.ts`). Smart Accounts Kit is the agent's *only* spending mechanism. |
+| **Best use of Venice AI** | 100% of inference is Venice (`llama-3.3-70b`), paid via Venice's **native x402** endpoint with wallet auth — no API key in the entire stack (`server/src/venice.ts`). Venice's no-data-retention privacy is the right substrate for an agent processing your research. Primary demo flow throughout the video. |
+| **1Shot Permissionless Relayer** | After each delivered run, the agent's completion fee is a `redeemDelegations` relayed via `relayer_send7710Transaction` — estimate-first with price-lock `context`, gas paid in USDC inside the same delegation bundle, **Ed25519-verified webhook receiver** (`POST /relayer/webhook`) feeding the live UI tape (`server/src/relayer.ts`). Demo video 0:50–1:20. |
+| **A2A Coordination** | **Working, settled on-chain:** the orchestrator redelegates a narrowed sub-budget ($0.01, 1 call, 1h expiry) to a critic sub-agent via `createSubDelegation` (`packages/shared/src/delegation.ts`); the critic pays for its own review inference and the facilitator redeems the **three-hop chain** `user → agent → critic` against the user's funds. Authority is `hash(parentDelegation)` — the sub-agent can never exceed the original grant. |
 | **Best Feedback** | [`FEEDBACK.md`](./FEEDBACK.md) — DX issues hit while building with `@metamask/smart-accounts-kit` v1.6 + `@metamask/x402` v0.2. |
 | **Best Social** | Build-in-public thread on X (linked in submission). |
 
@@ -131,15 +137,16 @@ FEEDBACK.md       Smart Accounts Kit DX notes collected while building (Feedback
 | 0:20 | User grants the delegation — show the signed delegation JSON with its three caveats highlighted. |
 | 0:50 | Agent claims its budget tranche through the **1Shot mainnet relayer** — webhook status updates flip live in the UI (Submitted → Confirmed), BaseScan link opened. |
 | 1:20 | Agent researches: each Venice call visibly goes `402 → pay → 200`, spend meter ticks up cent by cent; show `X-Balance-Remaining` from Venice. |
+| 1:50 | A2A: orchestrator redelegates $0.01 to the critic; the critic **pays for its own review** — point at the `402 → paid · critic` receipt and the 3-hop chain. |
 | 2:10 | The kill shot: over-budget request **rejected on-chain by the caveat enforcer**; agent stops gracefully. |
-| 2:30 | Final cited report + receipt: spent vs. budget, call count, every settlement tx. |
+| 2:30 | Final report with critic review + receipt: spent vs. budget, call count, every settlement tx; agent invoices its completion fee via 1Shot on screen. |
 | 2:50 | Track recap card. |
 
 ## Run it yourself
 
 ```bash
 pnpm install
-cp .env.example .env        # fill in two burner private keys (user, agent) — see below
+cp .env.example .env        # fill in burner private keys (user, agent, gateway, critic) — see below
 pnpm demo:e2e               # Base Sepolia end-to-end: delegate → agent answers → caveat rejection
 pnpm dev                    # web UI on :3000, server on :4021
 ```
