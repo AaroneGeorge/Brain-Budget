@@ -129,13 +129,28 @@ FEEDBACK.md       Smart Accounts Kit DX notes collected while building (Feedback
 | **Best Feedback** | [`FEEDBACK.md`](./FEEDBACK.md) — DX issues hit while building with `@metamask/smart-accounts-kit` v1.6 + `@metamask/x402` v0.2. |
 | **Best Social** | Build-in-public thread on X (linked in submission). |
 
+## Live on Base mainnet — verifiable
+
+Every track claim above was exercised end-to-end on **Base mainnet (chain 8453)** with real USDC and **zero ETH in any account**. A full run (`"tradeoffs between optimistic and zero-knowledge rollups"`, $0.06 budget) on 2026-06-14 produced these on-chain artifacts:
+
+| Step | What settled | BaseScan |
+|---|---|---|
+| Zero-ETH onboarding | user EOA → EIP-7702 delegator, gasless via 1Shot (fee in USDC) | [`0x270236e1…`](https://basescan.org/tx/0x270236e178622eef5aeb3ef26bfafc99915fe3330c9456ae5e16256c175a8f69) |
+| Zero-ETH onboarding | agent EOA → EIP-7702 delegator | [`0x4a074690…`](https://basescan.org/tx/0x4a07469041ad94f678c320f648c10922ba25e4e31535486d65d675da24a4c5d5) |
+| Zero-ETH onboarding | critic EOA → EIP-7702 delegator | [`0xc5fef4bd…`](https://basescan.org/tx/0xc5fef4bd8624c9c3666dfbe099ab5421dfddbe735f4e6614c73534ae71a0e376) |
+| x402 + ERC-7710 | inference paid by redeeming the user's delegation (1 of 6) | [`0xc5cf2725…`](https://basescan.org/tx/0xc5cf272566d873b45030919ac42ba800b701dd35c353eb568b44923d0a5a1fb1) |
+| A2A 3-hop | critic's own review paid via `user → agent → critic` redelegation | [`0x0b90b605…`](https://basescan.org/tx/0x0b90b605911995486e442d31f38f116141991e8b593dd639483eb7be49c98884) |
+| 1Shot completion fee | `redeemDelegations` relayed gaslessly, fee in USDC, **Ed25519 webhook** submitted → confirmed | [`0xb98fddcc…`](https://basescan.org/tx/0xb98fddccb7519921ef9837df24aa78630da8cd7b6b196c85241f9953c60e39d6) |
+
+Real Venice inference throughout (`llama-3.3-70b`, `mocked: false`). The 1Shot status webhook was delivered to a public tunnel of `POST /relayer/webhook`, **Ed25519-verified against the relayer's JWKS**, and streamed into the live run tape (not polling). Reproduce with the steps below — `server/scripts/bootstrap-mainnet.ts` performs the one-time gasless onboarding of the `.env` accounts.
+
 ## Demo video script (≤ 3 min)
 
 | Time | Beat |
 |---|---|
 | 0:00 | Problem: agents need money; keys and cards are custody. One sentence: "delegation, not custody." |
 | 0:20 | User grants the delegation — show the signed delegation JSON with its three caveats highlighted. |
-| 0:50 | Agent claims its budget tranche through the **1Shot mainnet relayer** — webhook status updates flip live in the UI (Submitted → Confirmed), BaseScan link opened. |
+| 0:50 | Zero-ETH onboarding: the user/agent/critic EOAs were upgraded to EIP-7702 delegators **gaslessly through the 1Shot mainnet relayer**, fee paid in USDC — show the BaseScan txs, note no ETH anywhere. |
 | 1:20 | Agent researches: each Venice call visibly goes `402 → pay → 200`, spend meter ticks up cent by cent; show `X-Balance-Remaining` from Venice. |
 | 1:50 | A2A: orchestrator redelegates $0.01 to the critic; the critic **pays for its own review** — point at the `402 → paid · critic` receipt and the 3-hop chain. |
 | 2:10 | The kill shot: over-budget request **rejected on-chain by the caveat enforcer**; agent stops gracefully. |
@@ -152,8 +167,21 @@ pnpm dev                    # web UI on :3000, server on :4021
 ```
 
 - **Base Sepolia (free):** ETH from any Base Sepolia faucet, test USDC from [Circle's faucet](https://faucet.circle.com/). Set `CHAIN=baseSepolia`.
-- **Base mainnet (the real demo):** fund the user account with ~$10 USDC and the gateway wallet with ~$5 USDC (one-time Venice x402 top-up). Set `CHAIN=base`. **Zero ETH needed anywhere** — even the one-time EIP-7702 upgrades ride through the 1Shot relayer with gas paid in USDC (`server/scripts/relayer-7702-e2e.ts` proves the full zero-ETH bootstrap: three fresh accounts upgraded + first claim, all gasless). Total cost of a full demo run: well under $1 of actual burn — Venice is ~$0.002/request and 1Shot is ~$0.01/tx.
-- The e2e script asserts: ≥2 x402 payments settled, Venice responses non-empty, spend ≤ cap, and the over-budget request **correctly refused**.
+- **Base mainnet (the real demo):** fund the **user** EOA with ~$10 USDC and the **gateway** EOA with ~$5 USDC (one-time Venice x402 top-up). **No ETH to anything.** Then:
+  ```bash
+  # 1. point at mainnet
+  #    .env: CHAIN=base
+  # 2. one-time gasless onboarding — upgrades the user/agent/critic EOAs to
+  #    EIP-7702 delegators through 1Shot, fee paid in USDC, zero ETH:
+  pnpm --filter server script scripts/bootstrap-mainnet.ts
+  #    (BOOTSTRAP_DRY_RUN=1 prices the first hop against the live relayer without moving funds)
+  # 3. (optional, scores higher) expose the 1Shot webhook receiver and set the URL:
+  ngrok http 4021            # then .env: RELAYER_WEBHOOK_URL=https://<id>.ngrok-free.app/relayer/webhook
+  # 4. run the demo
+  pnpm dev                   # UI on :3000, server on :4021
+  ```
+  **Zero ETH needed anywhere** — the one-time EIP-7702 upgrades ride through the 1Shot relayer with gas paid in USDC (`bootstrap-mainnet.ts` for the real accounts; `relayer-7702-e2e.ts` proves the same with three throwaway burners). A full run burns well under $1 — Venice is ~$0.002/request, 1Shot ~$0.01/tx, and the x402 inference USDC recycles into your own gateway wallet. If `RELAYER_WEBHOOK_URL` is unset the agent falls back to status polling — the demo still works, you just lose the live webhook tape. Emergency exit: `server/scripts/recover.ts` sweeps any account's USDC back to a wallet you control, gaslessly.
+- The Base Sepolia e2e script (`pnpm demo:e2e`) asserts: ≥2 x402 payments settled, Venice responses non-empty, spend ≤ cap, and the over-budget request **correctly refused**.
 
 ## What we'd build next
 

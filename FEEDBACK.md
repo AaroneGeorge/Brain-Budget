@@ -9,7 +9,9 @@ Each entry: what we tried, what happened, what would have helped.
 - **Facilitator hostname inconsistency:** the x402 seller guide's network table lists the
   facilitator at `tx-sentinel-base-*.dev-api.cx.metamask.io` while the code sample on the same
   page uses `api.cx.metamask.io`. One of these should be corrected, or the difference explained.
-  *(found during pre-build research — to be confirmed against live endpoints)*
+  *Confirmed against live endpoints: the `dev-api.cx.metamask.io` variant verifies + settles on
+  both Base Sepolia and Base mainnet — it's what every payment in this project used; we never
+  needed the `api.cx` host. Recommend the docs standardize on `dev-api.cx` or explain the split.*
 
 ## API / runtime
 
@@ -54,6 +56,17 @@ Each entry: what we tried, what happened, what would have helped.
   EIP-7702 authorization in one relayer task, and redemption succeeded. Excellent property —
   worth stating in the docs because it's the difference between "bootstrap then delegate"
   (two steps) and true one-shot onboarding.
+- **Re-confirmed on Base mainnet (June 14).** The same chained zero-ETH bootstrap ran against
+  the production relayer (`relayer.1shotapi.com`) to onboard the real user/agent/critic accounts
+  — three type-4 tasks, fee 0.01 USDC each, no ETH. `relayer_estimate7710Transaction` is a true
+  read-only dry-run (we priced the first hop with no submission), which made validating a
+  real-money flow before committing painless — a genuinely good API affordance.
+- **Webhooks: `destinationUrl` status callbacks arrive Ed25519-signed and verify cleanly against
+  the relayer's JWKS** (`/.well-known/jwks.json`). On mainnet we received both the `submitted`
+  and `confirmed` events within ~3s, signature-verified, ahead of our polling loop. One snag:
+  the signed payload must be re-serialized with **stably-sorted keys** before verifying (we
+  sort recursively) — the relayer signs a canonical JSON form, so a naive `JSON.stringify(body)`
+  of the received object fails verification. Worth a one-line note in the webhook docs.
 
 ## Wins worth keeping
 
@@ -62,7 +75,8 @@ Each entry: what we tried, what happened, what would have helped.
 - **The facilitator settles 3-hop delegation chains out of the box.** We redelegated
   user → agent → critic and the critic's x402 payment (with
   `parentPermissionContext = [subDelegation, userDelegation]`) verified and settled first try
-  on Base Sepolia. A2A coordination needs zero special-casing — worth advertising loudly.
+  on Base Sepolia, and again on **Base mainnet** (the critic paid for its own review through the
+  live 3-hop chain). A2A coordination needs zero special-casing — worth advertising loudly.
 - `createDelegation({ parentDelegation, scope })` narrowing + on-chain authority chaining is a
   genuinely clean primitive: the sub-agent's cap can never exceed the user's original grant,
   and that's enforced by the DelegationManager, not by our code.
