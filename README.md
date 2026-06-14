@@ -144,6 +144,8 @@ Every track claim above was exercised end-to-end on **Base mainnet (chain 8453)*
 
 Real Venice inference throughout (`llama-3.3-70b`, `mocked: false`). The 1Shot status webhook was delivered to a public tunnel of `POST /relayer/webhook`, **Ed25519-verified against the relayer's JWKS**, and streamed into the live run tape (not polling). Reproduce with the steps below — `server/scripts/bootstrap-mainnet.ts` performs the one-time gasless onboarding of the `.env` accounts.
 
+![BrainBudget running on Base mainnet — signed ERC-7710 delegation, 5 x402 settlements, A2A critic, and the 1Shot completion fee](./ui-mainnet-run.png)
+
 ## Demo video script (≤ 3 min)
 
 | Time | Beat |

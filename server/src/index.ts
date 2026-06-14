@@ -25,13 +25,18 @@ const usdcBalance = (address: `0x${string}`) =>
   });
 
 app.get("/state", async (_req, res) => {
+  // Tolerate a transient public-RPC blip on the balance read so the live UI
+  // ticker never breaks mid-demo; the UI just shows "—" for one poll cycle.
   const [userUsdc, venice] = await Promise.all([
-    usdcBalance(actors.userSmartAccount.address),
+    usdcBalance(actors.userSmartAccount.address).catch(() => null),
     veniceBalance().catch(() => null),
   ]);
   res.json({
     chain: { name: chainConfig.chain.name, id: chainConfig.chain.id },
-    user: { address: actors.userSmartAccount.address, usdc: formatUnits(userUsdc, 6) },
+    user: {
+      address: actors.userSmartAccount.address,
+      usdc: userUsdc !== null ? formatUnits(userUsdc, 6) : "—",
+    },
     agent: { address: actors.agentSmartAccount.address },
     critic: actors.criticSmartAccount ? { address: actors.criticSmartAccount.address } : null,
     gateway: { address: actors.gatewayEoa.address, venice, veniceMocked: veniceMocked() },
