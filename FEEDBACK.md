@@ -70,8 +70,8 @@ Each entry: what we tried, what happened, what would have helped.
 
 ## Wins worth keeping
 
-- `llms-smart-accounts-kit-full.txt` is excellent for context-loading coding agents — single
-  410KB file covered nearly every question we had.
+- `docs/vendor/smart-accounts-kit-full.txt` (the published `llms-full.txt`) is excellent for
+  context-loading coding agents — a single 410KB file covered nearly every question we had.
 - **The facilitator settles 3-hop delegation chains out of the box.** We redelegated
   user → agent → critic and the critic's x402 payment (with
   `parentPermissionContext = [subDelegation, userDelegation]`) verified and settled first try
