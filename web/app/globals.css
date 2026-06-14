@@ -1,46 +1,46 @@
 /* ============================================================
-   BrainBudget — clean, minimalist, professional dark theme
-   Design language adapted from HeroUI Native:
-   HSL token system · hsl(260 100% 70%) violet accent ·
-   semantic variants (primary / success / warning / danger / info)
+   BrainBudget — premium monochrome theme
+   Black & white chrome · restrained, "shiny just enough" surfaces.
+   Shine comes from sheen gradients, hairline highlights & depth —
+   not from saturated color. Color is reserved for small, refined
+   semantic accents (event badges · live dot · signed stamp).
    ============================================================ */
 
 :root {
   color-scheme: dark;
 
-  /* --- neutral surfaces (cool near-black to harmonize with violet) --- */
-  --bg: hsl(240 8% 6%);
-  --bg-elev: hsl(240 7% 8%);
-  --surface: hsl(240 6% 10%);
-  --surface-2: hsl(240 6% 13%);
-  --surface-3: hsl(240 6% 16%);
-  --border: hsl(240 6% 17%);
-  --border-strong: hsl(240 6% 24%);
+  /* --- monochrome surfaces (neutral, true black & white) --- */
+  --bg: hsl(0 0% 4%);
+  --bg-elev: hsl(0 0% 6.5%);
+  --surface: hsl(0 0% 8%);
+  --surface-2: hsl(0 0% 12%);
+  --surface-3: hsl(0 0% 16%);
+
+  /* translucent white borders catch light consistently over sheen */
+  --border: hsl(0 0% 100% / 0.1);
+  --border-strong: hsl(0 0% 100% / 0.18);
 
   /* --- foreground --- */
-  --fg: hsl(240 12% 96%);
-  --fg-muted: hsl(240 5% 64%);
-  --fg-subtle: hsl(240 5% 44%);
+  --fg: hsl(0 0% 98%);
+  --fg-muted: hsl(0 0% 63%);
+  --fg-subtle: hsl(0 0% 42%);
 
-  /* --- accent (HeroUI Native violet) --- */
-  --accent: hsl(259 92% 72%);
-  --accent-hover: hsl(259 95% 78%);
-  --accent-press: hsl(259 80% 65%);
-  --accent-fg: hsl(0 0% 100%);
-  --accent-soft: hsl(259 92% 72% / 0.14);
-  --accent-border: hsl(259 92% 72% / 0.38);
+  /* --- shine primitives --- */
+  --sheen: linear-gradient(180deg, hsl(0 0% 100% / 0.045), hsl(0 0% 100% / 0) 42%);
+  --hairline: inset 0 1px 0 hsl(0 0% 100% / 0.08);
+  --focus-ring: 0 0 0 3px hsl(0 0% 100% / 0.1);
 
-  /* --- semantic --- */
-  --success: hsl(152 56% 53%);
-  --success-soft: hsl(152 56% 53% / 0.14);
-  --warning: hsl(38 92% 62%);
-  --warning-soft: hsl(38 92% 62% / 0.15);
-  --danger: hsl(0 84% 69%);
-  --danger-soft: hsl(0 84% 69% / 0.13);
-  --info: hsl(214 90% 70%);
-  --info-soft: hsl(214 90% 70% / 0.14);
-  --secondary: hsl(291 78% 73%);
-  --secondary-soft: hsl(291 78% 73% / 0.14);
+  /* --- refined semantic accents (muted jewel tones, used sparingly) --- */
+  --success: hsl(150 46% 58%);
+  --success-soft: hsl(150 46% 58% / 0.12);
+  --warning: hsl(40 78% 64%);
+  --warning-soft: hsl(40 78% 64% / 0.12);
+  --danger: hsl(2 70% 66%);
+  --danger-soft: hsl(2 70% 66% / 0.12);
+  --info: hsl(208 68% 68%);
+  --info-soft: hsl(208 68% 68% / 0.12);
+  --violet: hsl(258 60% 74%);
+  --violet-soft: hsl(258 60% 74% / 0.12);
 
   /* --- shape --- */
   --r-sm: 8px;
@@ -49,9 +49,9 @@
   --r-pill: 999px;
 
   /* --- elevation --- */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow: 0 8px 30px -12px rgba(0, 0, 0, 0.6);
-  --shadow-lg: 0 24px 56px -16px rgba(0, 0, 0, 0.7);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow: 0 14px 40px -20px rgba(0, 0, 0, 0.85);
+  --shadow-lg: 0 30px 70px -28px rgba(0, 0, 0, 0.9);
 
   /* --- type --- */
   --font-d: var(--font-display), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -73,8 +73,8 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   background:
-    radial-gradient(900px 480px at 85% -8%, hsl(259 92% 72% / 0.08), transparent 60%),
-    radial-gradient(760px 520px at -8% 108%, hsl(214 90% 70% / 0.05), transparent 58%),
+    radial-gradient(1100px 520px at 50% -12%, hsl(0 0% 100% / 0.055), transparent 62%),
+    radial-gradient(800px 600px at 100% 100%, hsl(0 0% 100% / 0.025), transparent 60%),
     var(--bg);
   background-attachment: fixed;
   color: var(--fg);
@@ -83,8 +83,14 @@ body {
 }
 
 ::selection {
-  background: var(--accent-soft);
+  background: hsl(0 0% 100% / 0.16);
   color: var(--fg);
+}
+
+:focus-visible {
+  outline: 2px solid hsl(0 0% 100% / 0.45);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
 /* refined scrollbars */
@@ -100,13 +106,13 @@ body {
   background: transparent;
 }
 *::-webkit-scrollbar-thumb {
-  background: var(--border-strong);
+  background: hsl(0 0% 100% / 0.14);
   border-radius: var(--r-pill);
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background: var(--fg-subtle);
+  background: hsl(0 0% 100% / 0.26);
   background-clip: padding-box;
 }
 
@@ -137,8 +143,13 @@ body {
   line-height: 1;
 }
 
+/* silver-sheen metallic text — shine without color */
 .brand .tm {
-  color: var(--accent);
+  background: linear-gradient(180deg, hsl(0 0% 100%) 10%, hsl(0 0% 64%) 90%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
 }
 
 .tagline {
@@ -164,9 +175,10 @@ body {
   flex-direction: column;
   gap: 4px;
   padding: 10px 16px;
-  background: var(--surface);
+  background: var(--sheen), var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
+  box-shadow: var(--hairline);
   min-width: 0;
 }
 
@@ -229,10 +241,11 @@ body {
   font-family: var(--font-m);
   font-size: 11px;
   font-weight: 600;
-  color: var(--accent);
-  background: var(--accent-soft);
-  border: 1px solid var(--accent-border);
+  color: var(--fg-muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
   border-radius: var(--r-sm);
+  box-shadow: var(--hairline);
   padding: 3px 7px;
   line-height: 1;
 }
@@ -243,9 +256,18 @@ body {
 .gauge,
 .contract,
 .tape {
-  background: var(--surface);
+  background: var(--sheen), var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
+  box-shadow: var(--hairline), var(--shadow);
+  transition: border-color 0.2s ease;
+}
+
+.ask:hover,
+.gauge:hover,
+.contract:hover,
+.tape:hover {
+  border-color: var(--border-strong);
 }
 
 /* ---------- ask form ---------- */
@@ -267,6 +289,7 @@ body {
   min-height: 92px;
   resize: vertical;
   outline: none;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -275,8 +298,8 @@ body {
 }
 
 .ask textarea:focus {
-  border-color: var(--accent-border);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  border-color: hsl(0 0% 100% / 0.3);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4), var(--focus-ring);
 }
 
 .ask textarea:disabled {
@@ -303,7 +326,7 @@ body {
 .budget-row input[type="range"] {
   flex: 1;
   height: 4px;
-  accent-color: var(--accent);
+  accent-color: hsl(0 0% 92%);
   cursor: pointer;
 }
 
@@ -321,37 +344,44 @@ body {
   text-align: right;
 }
 
+/* primary action — white metallic button (premium monochrome shine) */
 button.go {
   width: 100%;
   font-family: var(--font-d);
   font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.01em;
-  background: var(--accent);
-  color: var(--accent-fg);
+  color: hsl(0 0% 7%);
+  background: linear-gradient(180deg, hsl(0 0% 100%), hsl(0 0% 86%));
   border: none;
   border-radius: var(--r);
   padding: 13px 16px;
   cursor: pointer;
-  transition: background 0.15s ease, transform 0.08s ease, box-shadow 0.2s ease;
-  box-shadow: 0 6px 18px -8px hsl(259 92% 72% / 0.6);
+  transition: transform 0.08s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  box-shadow:
+    inset 0 1px 0 hsl(0 0% 100% / 0.85),
+    0 1px 0 hsl(0 0% 0% / 0.4),
+    0 10px 26px -12px hsl(0 0% 100% / 0.25);
 }
 
 button.go:hover:not(:disabled) {
-  background: var(--accent-hover);
-  box-shadow: 0 10px 26px -8px hsl(259 92% 72% / 0.7);
+  filter: brightness(1.04);
+  box-shadow:
+    inset 0 1px 0 hsl(0 0% 100% / 0.9),
+    0 1px 0 hsl(0 0% 0% / 0.4),
+    0 14px 32px -12px hsl(0 0% 100% / 0.38);
 }
 
 button.go:active:not(:disabled) {
-  background: var(--accent-press);
   transform: translateY(1px);
+  filter: brightness(0.97);
 }
 
 button.go:disabled {
-  background: var(--surface-3);
   color: var(--fg-subtle);
+  background: var(--surface-3);
   cursor: wait;
-  box-shadow: none;
+  box-shadow: var(--hairline);
 }
 
 /* ---------- budget gauge ---------- */
@@ -373,7 +403,7 @@ button.go:disabled {
   font-size: 30px;
   font-weight: 600;
   letter-spacing: -0.02em;
-  color: var(--accent);
+  color: var(--fg);
 }
 
 .gauge-top .of {
@@ -388,14 +418,16 @@ button.go:disabled {
   border-radius: var(--r-pill);
   position: relative;
   overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
+/* white→silver fill with a soft sheen */
 .bar .fill {
   position: absolute;
   inset: 0 auto 0 0;
   border-radius: var(--r-pill);
-  background: linear-gradient(90deg, var(--accent-press), var(--accent));
-  box-shadow: 0 0 16px -2px hsl(259 92% 72% / 0.6);
+  background: linear-gradient(90deg, hsl(0 0% 72%), hsl(0 0% 100%));
+  box-shadow: 0 0 14px -2px hsl(0 0% 100% / 0.45), var(--hairline);
   transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -406,7 +438,7 @@ button.go:disabled {
   background: repeating-linear-gradient(
     90deg,
     transparent 0 calc(10% - 1px),
-    hsl(240 8% 6% / 0.55) calc(10% - 1px) 10%
+    hsl(0 0% 0% / 0.5) calc(10% - 1px) 10%
   );
 }
 
@@ -425,17 +457,15 @@ button.go:disabled {
   padding: 22px;
   position: relative;
   overflow: hidden;
-  background:
-    linear-gradient(180deg, var(--accent-soft), transparent 120px),
-    var(--surface);
 }
 
+/* subtle light edge instead of a colored accent bar */
 .contract::before {
   content: "";
   position: absolute;
   inset: 0 auto 0 0;
-  width: 3px;
-  background: var(--accent);
+  width: 2px;
+  background: linear-gradient(180deg, hsl(0 0% 100% / 0.6), hsl(0 0% 100% / 0.04));
 }
 
 .contract h3 {
@@ -493,6 +523,7 @@ button.go:disabled {
   word-break: break-all;
 }
 
+/* "signed" — a single refined color accent (semantic: valid) */
 .contract .stamp {
   position: absolute;
   top: 20px;
@@ -506,8 +537,9 @@ button.go:disabled {
   text-transform: uppercase;
   color: var(--success);
   background: var(--success-soft);
-  border: 1px solid hsl(152 56% 53% / 0.35);
+  border: 1px solid hsl(150 46% 58% / 0.32);
   border-radius: var(--r-pill);
+  box-shadow: var(--hairline);
   padding: 4px 10px;
 }
 
@@ -517,6 +549,7 @@ button.go:disabled {
   height: 6px;
   border-radius: 50%;
   background: var(--success);
+  box-shadow: 0 0 8px hsl(150 46% 58% / 0.8);
 }
 
 /* ---------- footnote ---------- */
@@ -557,11 +590,12 @@ button.go:disabled {
   color: var(--fg-muted);
 }
 
+/* live = one tasteful color signal (online-green), softly glowing */
 .tape-head .live {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  color: var(--accent);
+  color: var(--success);
 }
 
 .tape-head .live::before {
@@ -569,7 +603,7 @@ button.go:disabled {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--success);
   animation: pulse 1.5s infinite;
 }
 
@@ -577,11 +611,11 @@ button.go:disabled {
   0%,
   100% {
     opacity: 1;
-    box-shadow: 0 0 0 0 hsl(259 92% 72% / 0.55);
+    box-shadow: 0 0 0 0 hsl(150 46% 58% / 0.55), 0 0 8px hsl(150 46% 58% / 0.7);
   }
   60% {
-    opacity: 0.55;
-    box-shadow: 0 0 0 7px hsl(259 92% 72% / 0);
+    opacity: 0.6;
+    box-shadow: 0 0 0 6px hsl(150 46% 58% / 0), 0 0 8px hsl(150 46% 58% / 0.3);
   }
 }
 
@@ -624,6 +658,7 @@ button.go:disabled {
   padding-top: 3px;
 }
 
+/* badges — refined tinted pills with a faint inner highlight ("shine") */
 .entry .badge {
   display: inline-block;
   font-size: 9px;
@@ -636,43 +671,55 @@ button.go:disabled {
   vertical-align: 1px;
   background: var(--surface-3);
   color: var(--fg-muted);
+  border: 1px solid var(--border);
+  box-shadow: var(--hairline);
 }
 
 .entry.plan .badge {
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--info-soft);
+  color: var(--info);
+  border-color: hsl(208 68% 68% / 0.3);
 }
 .entry.step .badge {
   background: var(--success-soft);
   color: var(--success);
+  border-color: hsl(150 46% 58% / 0.3);
 }
 .entry.payment .badge {
   background: var(--warning-soft);
   color: var(--warning);
+  border-color: hsl(40 78% 64% / 0.3);
 }
 .entry.budget-stop .badge,
 .entry.error .badge {
   background: var(--danger-soft);
   color: var(--danger);
-}
-.entry.result .badge {
-  background: var(--accent);
-  color: var(--accent-fg);
+  border-color: hsl(2 70% 66% / 0.3);
 }
 .entry.relayer .badge {
   background: var(--info-soft);
   color: var(--info);
+  border-color: hsl(208 68% 68% / 0.3);
 }
 .entry.a2a .badge,
 .entry.critique .badge {
-  background: var(--secondary-soft);
-  color: var(--secondary);
+  background: var(--violet-soft);
+  color: var(--violet);
+  border-color: hsl(258 60% 74% / 0.3);
+}
+
+/* result = premium white pill */
+.entry.result .badge {
+  background: linear-gradient(180deg, hsl(0 0% 100%), hsl(0 0% 84%));
+  color: hsl(0 0% 7%);
+  border-color: transparent;
+  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.9), 0 2px 8px -2px hsl(0 0% 100% / 0.25);
 }
 
 .entry.payment .amount,
 .entry.relayer .amount {
   font-family: var(--font-m);
-  color: var(--warning);
+  color: var(--fg);
   font-weight: 600;
 }
 
@@ -681,8 +728,8 @@ button.go:disabled {
 }
 
 .entry .q {
-  color: var(--accent);
-  font-weight: 500;
+  color: var(--fg);
+  font-weight: 600;
 }
 
 .entry .body {
@@ -708,25 +755,34 @@ button.go:disabled {
   word-break: break-all;
 }
 
+/* ---------- links (redirectable on-chain identifiers) ---------- */
+
+.addr-link,
 a.tx-link {
-  color: var(--accent);
+  color: inherit;
   text-decoration: none;
-  border-bottom: 1px solid var(--accent-border);
-  transition: border-color 0.15s ease, color 0.15s ease;
+  border-bottom: 1px solid hsl(0 0% 100% / 0.18);
+  transition: color 0.15s ease, border-color 0.15s ease;
 }
 
+.addr-link:hover,
 a.tx-link:hover {
-  color: var(--accent-hover);
-  border-bottom-color: var(--accent);
+  color: hsl(0 0% 100%);
+  border-bottom-color: hsl(0 0% 100% / 0.55);
+}
+
+a.tx-link {
+  color: var(--fg-muted);
 }
 
 /* ---------- final report ---------- */
 
 .report {
   margin: 18px;
-  border: 1px solid var(--accent-border);
+  border: 1px solid var(--border-strong);
   border-radius: var(--r);
-  background: linear-gradient(180deg, var(--accent-soft), transparent 50%);
+  background: linear-gradient(180deg, hsl(0 0% 100% / 0.06), hsl(0 0% 100% / 0) 50%), var(--surface-2);
+  box-shadow: var(--hairline), var(--shadow);
   padding: 24px;
   animation: slide-in 0.5s ease both;
 }
@@ -770,8 +826,12 @@ a.tx-link:hover {
   font-size: 48px;
   font-weight: 700;
   letter-spacing: 0.1em;
-  color: var(--surface-3);
   line-height: 1;
+  background: linear-gradient(180deg, hsl(0 0% 26%), hsl(0 0% 13%));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
 }
 
 .empty p {

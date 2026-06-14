@@ -56,10 +56,26 @@ interface DelegationView {
 }
 
 const short = (a?: string) => (a ? `${a.slice(0, 6)}…${a.slice(-4)}` : "—");
+
+/* renders a shortened address as a link to the block explorer (plain text if no chain/base yet) */
+function Addr({ address, base }: { address?: string; base?: string }) {
+  if (!address) return <>—</>;
+  if (!base) return <>{short(address)}</>;
+  return (
+    <a className="addr-link" href={`${base}${address}`} target="_blank" rel="noreferrer">
+      {short(address)}
+    </a>
+  );
+}
+
 const clock = (iso: string) => new Date(iso).toLocaleTimeString("en-GB", { hour12: false });
 const EXPLORERS: Record<number, string> = {
   8453: "https://basescan.org/tx/",
   84532: "https://sepolia.basescan.org/tx/",
+};
+const ADDR_EXPLORERS: Record<number, string> = {
+  8453: "https://basescan.org/address/",
+  84532: "https://sepolia.basescan.org/address/",
 };
 
 export default function Home() {
@@ -132,6 +148,7 @@ export default function Home() {
   const calls = events.filter((e) => e.type === "payment").length;
   const result = events.find((e) => e.type === "result");
   const pct = Math.min(100, (spent / budget) * 100);
+  const addrBase = state ? ADDR_EXPLORERS[state.chain.id] : undefined;
 
   return (
     <div className="shell">
@@ -149,7 +166,9 @@ export default function Home() {
         </div>
         <div className="tick">
           <span className="k">user (delegator)</span>
-          <span className="v">{short(state?.user.address)}</span>
+          <span className="v">
+            <Addr address={state?.user.address} base={addrBase} />
+          </span>
         </div>
         <div className="tick">
           <span className="k">user usdc</span>
@@ -157,12 +176,16 @@ export default function Home() {
         </div>
         <div className="tick">
           <span className="k">agent (delegate)</span>
-          <span className="v">{short(state?.agent.address)}</span>
+          <span className="v">
+            <Addr address={state?.agent.address} base={addrBase} />
+          </span>
         </div>
         {state?.critic && (
           <div className="tick">
             <span className="k">critic (a2a)</span>
-            <span className="v">{short(state.critic.address)}</span>
+            <span className="v">
+              <Addr address={state.critic.address} base={addrBase} />
+            </span>
           </div>
         )}
         <div className="tick">
@@ -227,11 +250,15 @@ export default function Home() {
               <dl>
                 <div className="row">
                   <dt>delegator (user)</dt>
-                  <dd>{short(delegation.delegator)}</dd>
+                  <dd>
+                    <Addr address={delegation.delegator} base={addrBase} />
+                  </dd>
                 </div>
                 <div className="row">
                   <dt>delegate (agent)</dt>
-                  <dd>{short(delegation.delegate)}</dd>
+                  <dd>
+                    <Addr address={delegation.delegate} base={addrBase} />
+                  </dd>
                 </div>
                 <div className="row">
                   <dt>budget cap</dt>
@@ -276,7 +303,12 @@ export default function Home() {
               )}
 
               {events.map((event, i) => (
-                <Entry key={i} event={event} explorer={state ? EXPLORERS[state.chain.id] : undefined} />
+                <Entry
+                  key={i}
+                  event={event}
+                  explorer={state ? EXPLORERS[state.chain.id] : undefined}
+                  addrExplorer={addrBase}
+                />
               ))}
 
               {result?.type === "result" && (
@@ -297,7 +329,15 @@ export default function Home() {
   );
 }
 
-function Entry({ event, explorer }: { event: AgentEvent; explorer?: string }) {
+function Entry({
+  event,
+  explorer,
+  addrExplorer,
+}: {
+  event: AgentEvent;
+  explorer?: string;
+  addrExplorer?: string;
+}) {
   const cls = event.type;
   return (
     <div className={`entry ${cls}`}>
@@ -368,7 +408,8 @@ function Entry({ event, explorer }: { event: AgentEvent; explorer?: string }) {
             <span className="badge">a2a · redelegate</span>
             <span className="body">{event.message}</span>
             <span className="settle">
-              {short(event.from)} → {short(event.to)} · cap ${event.capUsd.toFixed(2)} ·{" "}
+              <Addr address={event.from} base={addrExplorer} /> →{" "}
+              <Addr address={event.to} base={addrExplorer} /> · cap ${event.capUsd.toFixed(2)} ·{" "}
               {event.maxCalls} call · authority {event.authority.slice(0, 18)}…
             </span>
           </>
