@@ -1,18 +1,17 @@
 import type { Metadata } from "next";
-import { Fraunces, Spline_Sans_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const fraunces = Fraunces({
+const inter = Inter({
   subsets: ["latin"],
   variable: "--font-display",
-  weight: ["400", "600", "700", "900"],
-  style: ["normal", "italic"],
+  display: "swap",
 });
 
-const splineMono = Spline_Sans_Mono({
+const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
-  weight: ["300", "400", "500", "600", "700"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -24,7 +23,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${fraunces.variable} ${splineMono.variable}`}>{children}</body>
+      <body className={`${inter.variable} ${jetbrainsMono.variable}`}>{children}</body>
     </html>
   );
 }
