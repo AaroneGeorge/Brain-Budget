@@ -19,7 +19,9 @@ const onchain = await publicClient.readContract({
 console.log(`gateway ${gateway.address}`);
 console.log(`gateway on-chain USDC: ${formatUnits(onchain, 6)} (chain ${chainConfig.chain.id})`);
 
-const client = new VeniceClient(process.env.GATEWAY_PRIVATE_KEY!, { autoTopUp: { enabled: false } });
+const client = new VeniceClient(process.env.GATEWAY_PRIVATE_KEY!, {
+  autoTopUp: { enabled: false, amount: 0 }, // read-only probe — never top up
+});
 try {
   const bal = await client.getBalance();
   console.log("venice getBalance():", JSON.stringify(bal, null, 2));
