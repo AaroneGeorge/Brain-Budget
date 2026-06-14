@@ -87,6 +87,7 @@ export default function Home() {
   const [running, setRunning] = useState(false);
   const [events, setEvents] = useState<AgentEvent[]>([]);
   const [delegation, setDelegation] = useState<DelegationView | null>(null);
+  const [showModal, setShowModal] = useState(false);
   const sourceRef = useRef<EventSource | null>(null);
   const tapeRef = useRef<HTMLDivElement | null>(null);
 
@@ -157,7 +158,27 @@ export default function Home() {
           Brain<span className="tm">Budget</span>
         </h1>
         <div className="tagline">a research agent that pays for its own brain</div>
+        <button className="how-it-works-btn" onClick={() => setShowModal(true)}>
+          How it works
+        </button>
       </header>
+
+      {showModal && (
+        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setShowModal(false)}>
+              ✕
+            </button>
+            <h2>How it works</h2>
+            <p>
+              The user signs an ERC-7710 delegation capping the agent&apos;s spend. Every inference
+              request hits an x402 paywall; the agent redelegates the budget down to exactly $0.01
+              and the MetaMask facilitator settles it on-chain. Overspend is rejected by the caveat
+              enforcer — at the contract level, not by trusting the agent.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="ticker">
         <div className="tick">
@@ -275,13 +296,6 @@ export default function Home() {
               </dl>
             </div>
           )}
-
-          <div className="footnote">
-            <b>How it works:</b> the user signs an ERC-7710 delegation capping the agent&apos;s
-            spend. Every inference request hits an x402 paywall; the agent redelegates the budget
-            down to exactly $0.01 and the MetaMask facilitator settles it on-chain. Overspend is
-            rejected by the caveat enforcer — at the contract level, not by trusting the agent.
-          </div>
         </section>
 
         <section>
