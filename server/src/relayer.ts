@@ -86,6 +86,8 @@ export async function claimBudgetViaRelayer(opts: {
   memo?: string;
   /** EIP-7702 authorizations to bundle into the relayer's type-4 tx (gasless upgrades) */
   authorizationList?: unknown[];
+  /** Validate + price the claim against the live relayer but DO NOT submit it (no funds move). */
+  dryRun?: boolean;
 }): Promise<ClaimResult> {
   const caps = await getCapabilities();
   const usdc = caps.tokens.find((t) => t.symbol === "USDC");
@@ -146,6 +148,13 @@ export async function claimBudgetViaRelayer(opts: {
   if (required !== feeAmount) {
     feeAmount = required;
     params = await buildAndSign(feeAmount);
+  }
+
+  // Dry run: the relayer has now verified the signed delegation, simulated both
+  // USDC transfers, and returned a real fee — i.e. it WOULD execute the sweep.
+  // Stop here without submitting, so no funds move.
+  if (opts.dryRun) {
+    return { taskId: "dry-run", feeUsdcAtoms: feeAmount.toString(), targetAddress: caps.targetAddress };
   }
 
   const taskId = await rpc<string>("relayer_send7710Transaction", {
