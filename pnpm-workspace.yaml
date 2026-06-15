@@ -4,7 +4,7 @@ packages:
   - packages/*
 allowBuilds:
   bufferutil: true
-  core-js: set this to true or false
+  core-js: false
   esbuild: true
   keccak: true
   sharp: true
