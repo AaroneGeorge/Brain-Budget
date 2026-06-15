@@ -731,6 +731,10 @@ brainbudget/
 │   ├── screenshots/             the demo screenshots embedded in this README
 │   └── vendor/                  pinned upstream docs (smart-accounts-kit-full.txt, 1Shot relayer skill)
 ├── reference/x402-7710-demo/    workshop reference implementation
+│
+├── Dockerfile                   single image that runs web + server together (mirrors `pnpm dev`)
+├── docker-compose.yml           one-command setup: `docker compose up --build` (mounts root .env)
+├── .dockerignore                keeps node_modules, build output, and secrets out of the image
 └── README.md                    
 ```
 
@@ -843,6 +847,17 @@ cp .env.example .env        # fill in burner private keys (user, agent, gateway,
 pnpm demo:e2e               # Base Sepolia: sign delegation → redeem a tranche → over-budget redemption rejected on-chain
 pnpm dev                    # web UI on :3000, server on :4021
 ```
+
+### …or with Docker (no local Node/pnpm needed)
+
+The repo ships a `Dockerfile` + `docker-compose.yml` that run **both** the web UI (:3000) and the server (:4021) in one container — the same as `pnpm dev`. You only need Docker installed and a filled-in root `.env`.
+
+```bash
+cp .env.example .env        # fill in burner private keys (user, agent, gateway, critic)
+docker compose up --build   # web UI on :3000, server on :4021
+```
+
+The `.env` is injected and mounted read-only, so you can edit keys and restart without rebuilding. Prefer raw Docker? `docker build -t brainbudget . && docker run --rm -p 3000:3000 -p 4021:4021 --env-file .env -v "$PWD/.env:/app/.env:ro" brainbudget`.
 
 ### `.env` (no Venice API key — inference is paid on‑chain)
 
