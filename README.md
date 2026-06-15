@@ -27,7 +27,7 @@
 9. [Run it yourself](#9-run-it-yourself)
 10. [Scripts reference](#10-scripts-reference)
 11. [What we'd build next](#11-what-wed-build-next)
-
+12. [Developer experience & feedback](#12-developer-experience--feedback)
 ---
 
 ## 1. What is BrainBudget?
@@ -911,3 +911,9 @@ Run any with `pnpm --filter server script scripts/<name>.ts`. Read‑only script
 - **A marketplace of erc7710‑x402‑paywalled tools** (search, scraping, code‑exec) any delegated agent can pay for.
 - **Deeper redelegation chains** — multi‑agent teams with per‑role budgets.
 - **A custom Solidity caveat enforcer** (e.g. "only whitelisted resource servers" / "only during market hours") to showcase the framework's composability.
+
+---
+
+## 12. Developer experience & feedback
+
+See [`docs/others/FEEDBACK.md`](docs/others/FEEDBACK.md) for detailed DX notes, API gotchas, and wins encountered while building BrainBudget with `@metamask/smart-accounts-kit` v1.6.x and `@metamask/x402` v0.2.x. Includes doc inconsistencies, runtime surprises, and the 1Shot relayer integration quirks — filed to help future builders ship faster.
