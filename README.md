@@ -1,8 +1,6 @@
-# 🧠 BrainBudget — the AI agent that pays for its own brain
+# BrainBudget — the AI agent that pays for its own brain
 
 > **Delegation, not custody.** An autonomous research agent that buys its own Venice AI inference, one signed x402 micropayment at a time, under a scoped ERC‑7710 delegation you can revoke — relayed gaslessly by 1Shot, **live on Base mainnet with zero ETH in any account.**
-
-**MetaMask Smart Accounts Kit × 1Shot API × Venice AI — Dev Cook‑Off submission**
 
 <p>
 <img alt="chain" src="https://img.shields.io/badge/Base-mainnet%208453-0052FF"> 
@@ -26,9 +24,9 @@
 6. [Repo layout & top‑view explanation](#6-repo-layout--top-view-explanation)
 7. [Live on Base mainnet — verifiable (and the Base Sepolia special case)](#7-live-on-base-mainnet--verifiable-and-the-base-sepolia-special-case)
 8. [Demo walkthrough (screenshots + verifiable transactions)](#8-demo-walkthrough-screenshots--verifiable-transactions)
-9. [Run it yourself](#10-run-it-yourself)
-10. [Scripts reference](#11-scripts-reference)
-11. [What we'd build next](#12-what-wed-build-next)
+9. [Run it yourself](#9-run-it-yourself)
+10. [Scripts reference](#10-scripts-reference)
+11. [What we'd build next](#11-what-wed-build-next)
 
 ---
 
