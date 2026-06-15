@@ -69,9 +69,13 @@ function Addr({ address, base }: { address?: string; base?: string }) {
 }
 
 const clock = (iso: string) => new Date(iso).toLocaleTimeString("en-GB", { hour12: false });
-const EXPLORERS: Record<number, string> = {
-  8453: "https://basescan.org/tx/",
-  84532: "https://sepolia.basescan.org/tx/",
+
+/* every transaction hash links to BaseScan mainnet, regardless of the run's chain */
+const BASESCAN_TX = "https://basescan.org/tx/";
+/* accepts a raw tx hash or any explorer URL containing one, always points it at BaseScan mainnet */
+const txLink = (hashOrUrl: string) => {
+  const hash = hashOrUrl.match(/0x[0-9a-fA-F]{64}/)?.[0] ?? hashOrUrl;
+  return `${BASESCAN_TX}${hash}`;
 };
 const ADDR_EXPLORERS: Record<number, string> = {
   8453: "https://basescan.org/address/",
@@ -386,12 +390,7 @@ export default function Home() {
               )}
 
               {events.map((event, i) => (
-                <Entry
-                  key={i}
-                  event={event}
-                  explorer={state ? EXPLORERS[state.chain.id] : undefined}
-                  addrExplorer={addrBase}
-                />
+                <Entry key={i} event={event} addrExplorer={addrBase} />
               ))}
 
               {result?.type === "result" && (
@@ -434,11 +433,9 @@ export default function Home() {
 
 function Entry({
   event,
-  explorer,
   addrExplorer,
 }: {
   event: AgentEvent;
-  explorer?: string;
   addrExplorer?: string;
 }) {
   const cls = event.type;
@@ -475,10 +472,10 @@ function Entry({
                 : "settled via erc-7710 redelegation"}{" "}
               · total ${event.spentUsd.toFixed(2)}
             </span>
-            {event.payment.txHash && explorer ? (
+            {event.payment.txHash ? (
               <a
                 className="settle tx-link"
-                href={`${explorer}${event.payment.txHash}`}
+                href={txLink(event.payment.txHash)}
                 target="_blank"
                 rel="noreferrer"
               >
@@ -532,7 +529,7 @@ function Entry({
             )}{" "}
             <span className="body">{event.message}</span>
             {event.txUrl && (
-              <a className="settle tx-link" href={event.txUrl} target="_blank" rel="noreferrer">
+              <a className="settle tx-link" href={txLink(event.txUrl)} target="_blank" rel="noreferrer">
                 claim tx ↗ basescan
               </a>
             )}
