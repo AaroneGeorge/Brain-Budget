@@ -78,6 +78,42 @@ const ADDR_EXPLORERS: Record<number, string> = {
   84532: "https://sepolia.basescan.org/address/",
 };
 
+/* the user's-eye view of a run — drives the "How it works" modal */
+const HOW_STEPS: { title: string; body: string }[] = [
+  {
+    title: "Fund — no ETH anywhere",
+    body: "A burner EOA is upgraded into a MetaMask smart account via EIP-7702, holding only USDC on Base. The upgrade itself is relayed gaslessly, with the fee paid in stablecoin.",
+  },
+  {
+    title: "Delegate in one click",
+    body: "You sign an ERC-7710 delegation that caps the agent: a USDC spend limit, a max number of calls, and a 24h expiry. The signed delegation is the entire trust artifact — no keys, seed phrases, or API keys ever change hands.",
+  },
+  {
+    title: "Ask a research question",
+    body: "Type what you want researched and set the budget slider. That number is the delegation cap — the agent can never exceed it, even if its code is buggy or hostile.",
+  },
+  {
+    title: "Every thought is a paid call",
+    body: "The agent plans, then runs research steps. Each step hits an x402 paywall; the agent redelegates the budget down to exactly $0.01 and the MetaMask facilitator settles it on-chain by redeeming your delegation. Venice AI returns the answer — paid by wallet signature, no API key.",
+  },
+  {
+    title: "Watch the spend meter live",
+    body: "A budget bar tracks every cent against the cap in real time, and each payment links straight to its settlement transaction on BaseScan.",
+  },
+  {
+    title: "Budget-aware autonomy",
+    body: "The agent reserves budget for synthesis and the critic, stopping research early rather than blowing the whole budget. Any over-budget payment is rejected on-chain by the caveat enforcer — at the contract level, not by trusting the agent.",
+  },
+  {
+    title: "A2A critic review",
+    body: "Before delivering, the orchestrator redelegates a narrowed sub-budget to a critic sub-agent, which pays for its own review through the 3-hop chain user → agent → critic — authority cryptographically chained to your original grant, never exceeding it.",
+  },
+  {
+    title: "Result, then a gasless invoice",
+    body: "You get a synthesized report with the critic's review appended. The agent then invoices a small completion fee, claimed gaslessly through the 1Shot relayer (fee in USDC, zero ETH), streaming claiming → submitted → confirmed with every webhook Ed25519-verified.",
+  },
+];
+
 export default function Home() {
   const [state, setState] = useState<ServerState | null>(null);
   const [question, setQuestion] = useState(
@@ -87,6 +123,7 @@ export default function Home() {
   const [running, setRunning] = useState(false);
   const [events, setEvents] = useState<AgentEvent[]>([]);
   const [delegation, setDelegation] = useState<DelegationView | null>(null);
+  const [askedQuestion, setAskedQuestion] = useState("");
   const [showModal, setShowModal] = useState(false);
   const sourceRef = useRef<EventSource | null>(null);
   const tapeRef = useRef<HTMLDivElement | null>(null);
@@ -111,6 +148,7 @@ export default function Home() {
     setRunning(true);
     setEvents([]);
     setDelegation(null);
+    setAskedQuestion(question.trim());
     sourceRef.current?.close();
     try {
       const response = await fetch("/api/agent/research", {
@@ -151,6 +189,23 @@ export default function Home() {
   const pct = Math.min(100, (spent / budget) * 100);
   const addrBase = state ? ADDR_EXPLORERS[state.chain.id] : undefined;
 
+  const downloadPdf = useCallback(async () => {
+    if (result?.type !== "result") return;
+    // jsPDF is pulled in lazily so it never weighs down the initial load
+    const { downloadReportPdf } = await import("./lib/reportPdf");
+    downloadReportPdf({
+      question: askedQuestion || question,
+      report: result.report,
+      spentUsd: result.spentUsd,
+      calls: result.calls,
+      budgetUsd: budget,
+      chain: state ? `${state.chain.name} #${state.chain.id}` : undefined,
+      delegator: state?.user.address ?? delegation?.delegator,
+      agent: state?.agent.address ?? delegation?.delegate,
+      generatedAt: new Date(),
+    });
+  }, [result, askedQuestion, question, budget, state, delegation]);
+
   return (
     <div className="shell">
       <header className="masthead">
@@ -170,12 +225,26 @@ export default function Home() {
               ✕
             </button>
             <h2>How it works</h2>
-            <p>
-              The user signs an ERC-7710 delegation capping the agent&apos;s spend. Every inference
-              request hits an x402 paywall; the agent redelegates the budget down to exactly $0.01
-              and the MetaMask facilitator settles it on-chain. Overspend is rejected by the caveat
-              enforcer — at the contract level, not by trusting the agent.
+            <p className="modal-sub">
+              Delegation, not custody — the agent buys its own AI inference under a scoped, revocable
+              budget you sign. Here is one run, step by step.
             </p>
+            <ol className="modal-steps">
+              {HOW_STEPS.map((step, i) => (
+                <li key={i}>
+                  <span className="step-n">{i + 1}</span>
+                  <div className="step-body">
+                    <h3>{step.title}</h3>
+                    <p>{step.body}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+            <div className="modal-note">
+              <strong>The guarantee</strong> — the MetaMask caveat enforcers reject anything outside
+              that scope at the contract level. The delegation fails closed, so the agent can never
+              spend more than you authorized.
+            </div>
           </div>
         </div>
       )}
@@ -327,7 +396,27 @@ export default function Home() {
 
               {result?.type === "result" && (
                 <div className="report">
-                  <h4>Research report</h4>
+                  <div className="report-head">
+                    <h4>Research report</h4>
+                    <button className="pdf-btn" onClick={downloadPdf} title="Download as PDF">
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
+                      Download PDF
+                    </button>
+                  </div>
                   <div className="body">{result.report}</div>
                   <div className="meta">
                     {result.calls} paid inferences · ${result.spentUsd.toFixed(2)} total · powered

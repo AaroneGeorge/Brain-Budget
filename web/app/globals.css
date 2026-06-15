@@ -787,13 +787,65 @@ a.tx-link {
   animation: slide-in 0.5s ease both;
 }
 
+.report-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 14px;
+}
+
 .report h4 {
   font-family: var(--font-d);
   font-weight: 600;
   font-size: 18px;
   letter-spacing: -0.01em;
-  margin: 0 0 14px;
+  margin: 0;
   color: var(--fg);
+}
+
+.pdf-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+  padding: 8px 14px;
+  font-family: var(--font-m);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg);
+  cursor: pointer;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-pill);
+  background: linear-gradient(180deg, hsl(0 0% 100% / 0.08), hsl(0 0% 100% / 0) 60%), var(--surface-3);
+  box-shadow: var(--hairline), var(--shadow-sm);
+  transition: transform 0.12s ease, border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
+}
+
+.pdf-btn svg {
+  color: var(--success);
+  transition: transform 0.18s ease;
+}
+
+.pdf-btn:hover {
+  color: #fff;
+  border-color: var(--success);
+  background: linear-gradient(180deg, hsl(0 0% 100% / 0.12), hsl(0 0% 100% / 0) 60%), var(--surface-3);
+}
+
+.pdf-btn:hover svg {
+  transform: translateY(1px);
+}
+
+.pdf-btn:active {
+  transform: translateY(1px);
+}
+
+.pdf-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
 .report .body {
@@ -897,10 +949,23 @@ a.tx-link {
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-lg);
   padding: 32px;
-  max-width: 520px;
+  max-width: 600px;
   width: 90%;
+  max-height: 86vh;
+  overflow-y: auto;
   position: relative;
   animation: slide-up 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  scrollbar-width: thin;
+  scrollbar-color: var(--surface-3) transparent;
+}
+
+.modal-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+  background: var(--surface-3);
+  border-radius: var(--r-pill);
 }
 
 @keyframes slide-up {
@@ -942,7 +1007,7 @@ a.tx-link {
   font-weight: 600;
   font-size: 24px;
   letter-spacing: -0.01em;
-  margin: 0 0 16px;
+  margin: 0 0 8px;
   color: var(--fg);
 }
 
@@ -951,4 +1016,79 @@ a.tx-link {
   line-height: 1.7;
   color: var(--fg-muted);
   margin: 0;
+}
+
+.modal-sub {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--fg-muted);
+  margin: 0 0 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ---- point-wise step list ---- */
+.modal-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.modal-steps li {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 14px;
+  align-items: start;
+}
+
+.step-n {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-m);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--success);
+  background: var(--success-soft);
+  border: 1px solid hsl(150 46% 58% / 0.3);
+  border-radius: var(--r-pill);
+  box-shadow: var(--hairline);
+}
+
+.step-body h3 {
+  font-family: var(--font-d);
+  font-size: 14.5px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--fg);
+  margin: 3px 0 5px;
+}
+
+.modal-steps .step-body p {
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--fg-muted);
+}
+
+/* ---- closing guarantee callout ---- */
+.modal-note {
+  margin-top: 26px;
+  padding: 16px 18px;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--fg-muted);
+  background: var(--success-soft);
+  border: 1px solid hsl(150 46% 58% / 0.22);
+  border-left: 3px solid var(--success);
+  border-radius: var(--r-sm);
+}
+
+.modal-note strong {
+  color: var(--fg);
+  font-weight: 600;
 }
