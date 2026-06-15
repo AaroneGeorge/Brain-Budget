@@ -1,0 +1,31 @@
+# Never copy local installs or build output into the image — deps are
+# installed inside the build, and host node_modules may contain native
+# binaries built for a different platform.
+node_modules
+**/node_modules
+.next
+web/.next
+dist
+**/dist
+out
+.turbo
+*.tsbuildinfo
+**/*.tsbuildinfo
+
+# Secrets and local-only files. Pass env in via --env-file / compose instead.
+.env
+.env.local
+*.local
+
+# Repo cruft not needed at runtime.
+.git
+.gitignore
+reference/
+docs/
+.playwright-mcp/
+*.log
+.DS_Store
+fable_response.md
+Dockerfile
+.dockerignore
+docker-compose.yml

@@ -1,0 +1,17 @@
+# One-command setup:  docker compose up --build
+#
+# Requires a .env at the repo root (copy .env.example -> .env and fill in the
+# burner keys). The web UI is then on http://localhost:3000.
+services:
+  brainbudget:
+    build: .
+    # Inject the repo-root .env into the container's environment.
+    env_file:
+      - .env
+    ports:
+      - "3000:3000" # web UI
+      - "4021:4021" # tools/agent server
+    # Mount your local .env so edits are picked up without rebuilding the image.
+    # The server reads /app/.env at runtime.
+    volumes:
+      - ./.env:/app/.env:ro
